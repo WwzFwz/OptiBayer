@@ -1,0 +1,37 @@
+# Claude Code
+.claude
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.python-version
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data hasil olahan (bisa diregenerasi dari data/raw + src/preprocess.py)
+data/processed/*
+!data/processed/.gitkeep
+
+# Model terlatih (biasanya besar; metrics.json tetap di-track)
+models/*.pkl
+models/*.joblib
+models/*.bin
+models/*.ubj
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Env & secrets
+.env
+*.local
+
+# Streamlit
+.streamlit/secrets.toml
