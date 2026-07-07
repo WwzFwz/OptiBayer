@@ -1,4 +1,4 @@
-# ANTAM Hackathon — Optimasi Proses Bayer (Bauksit → Alumina)
+# ANTAM Hackathon — 
 
 
 ## Struktur Folder
