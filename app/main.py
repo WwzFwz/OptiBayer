@@ -1,6 +1,7 @@
 """AI RED MUD — CRO Console (doc 10).
 
-Jalankan:  streamlit run app/app.py
+Jalankan:  python -m streamlit run app/main.py
+(JANGAN menamai file ini app.py — akan shadow package `app` saat streamlit run.)
 """
 
 from __future__ import annotations
