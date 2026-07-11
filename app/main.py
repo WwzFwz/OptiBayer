@@ -30,6 +30,17 @@ st.set_page_config(
     page_title="AI RED MUD — CRO Console", page_icon="🏭", layout="wide"
 )
 
+# Artefak model di-gitignore (regenerable). Clone segar / deploy cloud:
+# latih otomatis sekali di startup — sekalian bukti klaim "retrain dalam menit".
+from src.models import registry as _registry  # noqa: E402
+
+if not _registry.available():
+    from src.models.train import train_all
+
+    with st.spinner("Model belum ada — melatih surrogate dari data (±30 dtk)..."):
+        train_all(str(ROOT / "data" / "raw" / "data.csv"))
+    st.toast("Surrogate terlatih & tersimpan ke registry")
+
 
 # ---------- data & model (cache) ----------
 @st.cache_data(show_spinner="Memuat data pabrik...")
