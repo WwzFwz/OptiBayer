@@ -12,7 +12,7 @@ Input: komposisi bauksit & kondisi operasi. Output: rekomendasi setpoint yang
 ```bash
 pip install -r requirements.txt
 python -m src.models.train --data data/raw/data.csv   # latih surrogate (sekali)
-python -m streamlit run app/app.py                    # buka dashboard
+python -m streamlit run app/main.py                   # buka dashboard
 ```
 
 Uji tanpa dashboard (semua engine bisa jalan dari CLI, doc 09 §5):
@@ -51,7 +51,7 @@ antam-hackathon/
 │   ├── optimize/   pareto (NSGA-II carbon-aware) · goal_seek · regret
 │   └── advisory/   context · template · providers (LLM fleksibel)
 ├── models/                    ← artefak + metrics.json (hasil train)
-├── app/                       ← dashboard Streamlit (app.py + ui.py + views/)
+├── app/                       ← dashboard Streamlit (main.py + ui.py + views/)
 └── tests/                     ← uji per milestone
 ```
 

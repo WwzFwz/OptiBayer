@@ -10,7 +10,7 @@ from streamlit.testing.v1 import AppTest
 
 
 def main():
-    at = AppTest.from_file(str(ROOT / "app" / "app.py"), default_timeout=180)
+    at = AppTest.from_file(str(ROOT / "app" / "main.py"), default_timeout=180)
     at.run()
     assert not at.exception, at.exception
     # KPI + advisory + sidebar hadir
