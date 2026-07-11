@@ -9,3 +9,4 @@ plotly
 streamlit
 joblib
 requests
+python-dotenv
