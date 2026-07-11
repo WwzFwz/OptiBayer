@@ -1,0 +1,89 @@
+{
+  "name": "surrogate_precip_yield_pct",
+  "features": [
+    "al2o3_pct",
+    "reactive_sio2_pct",
+    "fe2o3_pct",
+    "tio2_pct",
+    "cao_pct",
+    "mgo_pct",
+    "na2o_pct",
+    "k2o_pct",
+    "cr2o3_pct",
+    "others_pct",
+    "particle_size_um",
+    "digester_temp_c",
+    "naoh_conc_gl",
+    "precip_temp_c",
+    "seed_ratio"
+  ],
+  "bounds": {
+    "al2o3_pct": [
+      49.03,
+      62.97
+    ],
+    "reactive_sio2_pct": [
+      1.51,
+      8.0
+    ],
+    "fe2o3_pct": [
+      12.02,
+      24.97
+    ],
+    "tio2_pct": [
+      0.25,
+      3.0
+    ],
+    "cao_pct": [
+      0.25,
+      1.5
+    ],
+    "mgo_pct": [
+      0.25,
+      0.92
+    ],
+    "na2o_pct": [
+      0.01,
+      0.3
+    ],
+    "k2o_pct": [
+      0.05,
+      0.6
+    ],
+    "cr2o3_pct": [
+      0.01,
+      0.15
+    ],
+    "others_pct": [
+      2.71,
+      34.49
+    ],
+    "particle_size_um": [
+      50.07117081,
+      74.9861908
+    ],
+    "digester_temp_c": [
+      140.0002289,
+      149.992218
+    ],
+    "naoh_conc_gl": [
+      140.0092621,
+      159.9896545
+    ],
+    "precip_temp_c": [
+      50.03402328,
+      69.99582672
+    ],
+    "seed_ratio": [
+      2.001639843,
+      2.999345541
+    ]
+  },
+  "metrics": {
+    "cv_r2": 0.9999340359286248,
+    "cv_mae": 0.017621917248468396,
+    "cv_resid_std": 0.023673012417267537,
+    "n_rows": 995
+  },
+  "data_hash": "dde015ed0192"
+}
