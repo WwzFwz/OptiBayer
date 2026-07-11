@@ -1,5 +1,8 @@
 # 05 — Rencana Kerja
 
+> ⚠ **Update 2026-07-11:** urutan kerja digantikan oleh **doc 11 (plan implementasi
+> ber-milestone)**. Isi teknis di sini (preprocessing, model, jawaban juri) masih valid.
+
 Estimasi total: ±4–6 hari kerja efektif untuk tim 2 orang. Prioritas dari atas ke bawah —
 kalau waktu habis, potong dari bawah (Pareto & SHAP boleh dikorbankan, dashboard tidak).
 
