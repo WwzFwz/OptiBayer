@@ -16,6 +16,13 @@ from __future__ import annotations
 import json
 import os
 
+try:  # muat .env kalau ada (python-dotenv); tanpa itu pakai env sistem saja
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
 from src.advisory import template
 
 _SYSTEM = (
