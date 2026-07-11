@@ -55,6 +55,9 @@ antam-hackathon/
 └── tests/                     ← uji per milestone
 ```
 
+> 📖 **Baru clone repo? Ikuti [docs/13-panduan-setup.md](docs/13-panduan-setup.md)** —
+> setup 5 menit, tur semua fitur, setup LLM gratis, troubleshooting.
+
 ## Mulai dari mana?
 
 1. `docs/01` konteks bisnis → `docs/06` analisis lengkap solusi.
