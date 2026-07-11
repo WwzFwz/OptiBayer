@@ -47,7 +47,7 @@ def render(row: pd.Series, ctx: dict):
             marker=dict(color=ui.INK, size=12, symbol="x"),
         ))
         fig.update_layout(xaxis_title="Suhu (°C)", yaxis_title="Al₂O₃ terlarut (g/L)")
-        st.plotly_chart(ui.base_layout(fig, height=380), use_container_width=True)
+        st.plotly_chart(ui.base_layout(fig, height=380), width="stretch")
 
     st.divider()
     d = ctx["delta_if_followed"]

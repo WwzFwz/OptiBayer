@@ -36,6 +36,20 @@ memberikan data sebenarnya yang lebih lengkap. Konsekuensi desain (WAJIB, bukan 
 | 2026-07-11 | 3 taruhan inovasi: carbon-aware optimization, regret meter, shift-handover report (doc 12) | Pembeda nyata & murah; RL/multi-agent DITOLAK (risiko > nilai) |
 | 2026-07-11 | LLM = provider fleksibel via env (`template`/`ollama`/`groq`/`gemini`), TANPA token berbayar | Tidak ada budget API; laptop 16 GB RAM cukup utk Qwen2.5-7B Q4 lokal; Groq/Gemini free-tier utk demo lebih ngebut kalau ada internet |
 
+## Status implementasi (2026-07-11)
+
+**M0–M3 + sebagian M4 SELESAI & teruji** (semua test di `tests/` hijau):
+- M0: schema/adapter/validate/capability — 1000→N baris bersih, capability benar
+- M1: 4 surrogate LightGBM (R² CV 0.94–0.99), SHAP gate lulus (silika dominan −)
+- M2: karbonasi + Ceq + neraca Na; NSGA-II carbon-aware 1.5 dtk; goal-seek; uji silika 2% vs 7% lulus
+- M3: replay 96 jam + skenario silika spike (baris NYATA ber-silika tinggi, bukan karangan);
+  advisory template; dashboard 5 tab jalan tanpa exception (AppTest)
+- M4 sebagian: carbon-aware (I2) ✔, regret meter (I1) ✔, handover report (I4) ✔,
+  provider LLM fleksibel ✔ · BELUM: conformal, benchmark TabPFN, notebook symbolic regression
+- ⚠ Environment: `starlette` di-upgrade ke 1.3.1 di user site utk Streamlit baru —
+  bentrok dengan pin `fastapi 0.115.5` (proyek lain di laptop yang pakai fastapi bisa
+  kena; solusi bersih = venv per proyek)
+
 ## TODO penting (di luar rencana kerja doc 05)
 
 - [ ] **Minta Ainin regenerasi data**: variasikan causticity, Na₂CO₃ conversion,

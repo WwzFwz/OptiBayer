@@ -72,10 +72,10 @@ with st.sidebar:
 
     seq = _sequence(ss.scenario)
     c1, c2 = st.columns(2)
-    if c1.button("▶ Play" if not ss.playing else "⏸ Pause", use_container_width=True):
+    if c1.button("▶ Play" if not ss.playing else "⏸ Pause", width="stretch"):
         ss.playing = not ss.playing
         st.rerun()
-    if c2.button("⏭ +1 jam", use_container_width=True):
+    if c2.button("⏭ +1 jam", width="stretch"):
         ss.hour = min(ss.hour + 1, len(seq) - 1)
     speed = st.slider("Detik per jam simulasi", 1.0, 5.0, 2.0, 0.5)
     ss.hour = st.slider("Jam simulasi", 0, len(seq) - 1, ss.hour)

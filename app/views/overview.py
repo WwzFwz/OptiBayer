@@ -19,23 +19,23 @@ def render(seq: pd.DataFrame, hour: int):
     c1.plotly_chart(
         ui.trend(x, hist["recovery_pct"], "Recovery", band=(85, 100),
                  color=ui.SERIES[0], title="Recovery Al (%)"),
-        use_container_width=True,
+        width="stretch",
     )
     c2.plotly_chart(
         ui.trend(x, hist["total_opex"], "OPEX", band=(0, 2500),
                  color=ui.SERIES[2], title="Total OPEX (/jam)"),
-        use_container_width=True,
+        width="stretch",
     )
     c3, c4 = st.columns(2)
     c3.plotly_chart(
         ui.trend(x, hist["reactive_sio2_pct"], "Silika", band=(0, 5.5),
                  color=ui.SERIES[4], title="Silika Reaktif Feed (%) — musuh utama"),
-        use_container_width=True,
+        width="stretch",
     )
     c4.plotly_chart(
         ui.trend(x, hist["red_mud_t"], "Red mud", band=(0, 75),
                  color=ui.SERIES[1], title="Red Mud Basah (ton)"),
-        use_container_width=True,
+        width="stretch",
     )
 
     st.divider()
@@ -97,6 +97,6 @@ def render(seq: pd.DataFrame, hour: int):
     st.subheader("📋 Audit Trail Keputusan Operator")
     log = st.session_state.get("advisory_log", [])
     if log:
-        st.dataframe(pd.DataFrame(log), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(log), width="stretch", hide_index=True)
     else:
         st.caption("Belum ada keputusan advisory yang dicatat di sesi ini.")

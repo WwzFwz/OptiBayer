@@ -1,33 +1,62 @@
-# ANTAM Hackathon — Optimasi Proses Bayer (Bauksit → Alumina)
+# ANTAM Hackathon — AI RED MUD (Bayer Process Advisor + CRO Console)
 
-**Solusi:** *Bayer Process Advisor* — sistem rekomendasi setpoint proses berbasis ML.
-Input: komposisi bauksit yang masuk pabrik. Output: rekomendasi parameter operasi
-(suhu digester, konsentrasi NaOH, ukuran partikel, suhu presipitasi, rasio seed)
-yang **memaksimalkan recovery aluminium, meminimalkan OPEX, dan meminimalkan red mud**.
+**Solusi:** dashboard monitoring + advisory untuk Control Room Operator (CRO).
+Neuro-symbolic digital twin: surrogate ML (LightGBM) + fisika neraca massa +
+optimizer multi-objektif (NSGA-II, carbon-aware) + advisory ber-grounding.
+Input: komposisi bauksit & kondisi operasi. Output: rekomendasi setpoint yang
+**memaksimalkan recovery Al, meminimalkan OPEX (NaOH/CaO), meminimalkan red mud**
+— plus kuantifikasi CCUS karbonasi red mud (23 kg CO₂/ton, paper 2026).
+
+## Menjalankan
+
+```bash
+pip install -r requirements.txt
+python -m src.models.train --data data/raw/data.csv   # latih surrogate (sekali)
+python -m streamlit run app/app.py                    # buka dashboard
+```
+
+Uji tanpa dashboard (semua engine bisa jalan dari CLI, doc 09 §5):
+
+```bash
+python tests/test_data.py       # M0 fondasi data
+python tests/test_engine.py     # M2 fisika + optimizer + regret
+python tests/test_advisory.py   # M3 replay + advisory
+python tests/test_app.py        # dashboard end-to-end (AppTest)
+```
+
+Advisory LLM opsional & gratis — set env `LLM_PROVIDER`:
+`template` (default, offline tanpa AI) · `ollama` (lokal) · `groq`/`gemini`
+(free tier, butuh API key di `.env`).
 
 ## Struktur Folder
 
 ```
 antam-hackathon/
-├── README.md                 
-├── docs/                      ← semua dokumen analisis & perencanaan
-│   ├── 01-analisis-masalah.md      (first-principles: masalah apa yang bernilai)
-│   ├── 02-analisis-data.md         (isi data sintesis, kualitas, yang perlu dibersihkan)
-│   ├── 03-solusi-dan-arsitektur.md (solusi yang diusulkan + arsitektur teknis)
-│   ├── 04-sumber-data-referensi.md (perlu data asli? cari di mana?)
-│   └── 05-rencana-kerja.md         (roadmap sampai hari-H hackathon)
-├── data/
-│   ├── raw/data.csv           ← data sintesis asli (JANGAN diedit)
-│   └── processed/             ← hasil cleaning (dibuat oleh src/preprocess)
-├── notebooks/                 ← EDA & eksperimen model (Jupyter)
-├── src/                       ← kode final (preprocess, training, optimizer)
-├── models/                    ← model terlatih (.pkl / .json)
-└── app/                       ← dashboard demo (Streamlit)
+├── docs/                      ← analisis & perencanaan
+│   ├── 01–05 …                    (fondasi awal; 03 & 05 punya penerus)
+│   ├── 06-cro-dashboard-analisis  (validasi klaim + model + inovasi stack)
+│   ├── 07-integrasi-produksi      (OPC UA/historian, keamanan OT, roadmap 3 fase)
+│   ├── 08-catatan-penting         (living doc: keputusan, TODO, info kunci)
+│   ├── 09-arsitektur-v2           (engineering view: schema/adapter/capability)
+│   ├── 10-desain-dashboard        (UI/UX CRO console + acceptance test)
+│   ├── 11-plan-implementasi       (milestone M0–M5)
+│   └── 12-inovasi                 (carbon-aware, regret meter, dst.)
+├── data/raw/data.csv          ← data sintesis (JANGAN diedit)
+├── src/
+│   ├── schema.py                  (satu-satunya pemetaan kolom mentah→kanonik)
+│   ├── capability.py              (fitur on/off otomatis dari data)
+│   ├── data/       adapters · validate · replay
+│   ├── models/     train · registry · predict · explain (SHAP)
+│   ├── physics/    carbonation · precipitation (Ceq) · na_balance
+│   ├── optimize/   pareto (NSGA-II carbon-aware) · goal_seek · regret
+│   └── advisory/   context · template · providers (LLM fleksibel)
+├── models/                    ← artefak + metrics.json (hasil train)
+├── app/                       ← dashboard Streamlit (app.py + ui.py + views/)
+└── tests/                     ← uji per milestone
 ```
 
 ## Mulai dari mana?
 
-1. Baca `docs/01-analisis-masalah.md` → paham konteks bisnisnya.
-2. Baca `docs/02-analisis-data.md` → paham data teman kamu.
-3. Baca `docs/03-solusi-dan-arsitektur.md` → apa yang mau dibangun.
-4. Ikuti `docs/05-rencana-kerja.md`.
+1. `docs/01` konteks bisnis → `docs/06` analisis lengkap solusi.
+2. `docs/11` plan implementasi (status: M0–M3 selesai, lihat `docs/08`).
+3. Jalankan dashboard, pilih skenario **"Gangguan: Silika Spike"**, tekan ▶ Play.

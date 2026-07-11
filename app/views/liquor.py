@@ -50,7 +50,7 @@ def render(row: pd.Series, ctx: dict):
         link=dict(source=src, target=dst, value=val,
                   color="rgba(255,255,255,0.14)"),
     ))
-    st.plotly_chart(ui.base_layout(fig, height=380), use_container_width=True)
+    st.plotly_chart(ui.base_layout(fig, height=380), width="stretch")
 
     total_loss = nb["dsp_loss_t"] + nb["dead_soda_net_t"] + nb["physical_loss_t"]
     c = st.columns(4)

@@ -66,7 +66,7 @@ def render(row: pd.Series, ctx: dict):
     fig.update_layout(
         xaxis_title="Suhu Digester (°C)", yaxis_title="Konsentrasi NaOH (g/L)"
     )
-    st.plotly_chart(ui.base_layout(fig, height=430), use_container_width=True)
+    st.plotly_chart(ui.base_layout(fig, height=430), width="stretch")
 
     st.divider()
     st.subheader("What-if: geser setpoint, lihat prediksi")

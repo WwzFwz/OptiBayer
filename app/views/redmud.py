@@ -31,7 +31,7 @@ def render(row: pd.Series, ctx: dict):
             color="rgba(255,255,255,0.14)",
         ),
     ))
-    st.plotly_chart(ui.base_layout(fig, height=340), use_container_width=True)
+    st.plotly_chart(ui.base_layout(fig, height=340), width="stretch")
     st.caption(
         f"Ton Al per basis ~100 t bauksit. Hilang ke red mud: "
         f"**{al_lost:.1f} t Al** ({al_lost / al_feed * 100:.1f}% feed) — "
