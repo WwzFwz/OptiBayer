@@ -1,0 +1,67 @@
+# 08 — Catatan Penting & Masa Depan (living document)
+
+> Tambahkan catatan baru di atas, beri tanggal. Ini tempat parkir keputusan, utang
+> teknis, dan ide masa depan supaya tidak hilang di kepala/chat.
+
+## ⭐ Info kunci kompetisi
+
+**2026-07-11 — Data sintesis BUKAN acuan final.** Di tahap selanjutnya panitia akan
+memberikan data sebenarnya yang lebih lengkap. Konsekuensi desain (WAJIB, bukan opsional):
+
+1. **Jangan hardcode nama kolom** di seluruh kode — semua daftar fitur/target lewat satu
+   file konfigurasi (mis. `src/schema.py` / `features.yaml`). Ganti dataset = edit config
+   + retrain, bukan tulis ulang kode.
+2. **Training satu perintah**: `python src/train.py --data <path>` → model baru dalam
+   hitungan menit begitu data asli datang. Ini kalimat pitch yang kuat.
+3. **Isolasi pembersihan khusus data sintesis** (clip digestion eff >100%, drop make-up
+   negatif) di satu modul terpisah — jangan tersebar, karena data asli punya cacat berbeda.
+4. **Capability detection di app**: panel/model aktif otomatis berdasarkan kolom yang
+   tersedia & bervariasi. Contoh: kalau data asli punya causticity yang bervariasi →
+   soft sensor (klaim #2 Ainin) menyala sendiri tanpa ubah kode dashboard.
+5. **Replay engine = interface tipis** — kalau data asli ternyata time-series
+   bertimestamp, tinggal ganti sumber feed, bukan rombak dashboard.
+6. Jangan menghabiskan waktu menyempurnakan akurasi di data sintesis — dia hanya
+   scaffolding. Prioritas: pipeline & dashboard yang siap menelan data apa pun.
+
+## Keputusan yang sudah diambil (dan alasannya)
+
+| Tanggal | Keputusan | Alasan |
+|---|---|---|
+| 2026-07-11 | Arsitektur config-driven / schema-agnostic (6 aturan di atas) | Tahap berikutnya dapat data asli yang lebih lengkap |
+| 2026-07-11 | Bentuk solusi: **web app Streamlit** (bukan Dash/React) | Tim 2 orang; otak semua di Python; UI 1–1.5 hari (doc 06 Bag. 7) |
+| 2026-07-11 | Model utama: **LightGBM/XGBoost**, bukan DL/stacking berat | Tabular 1000 baris; SHAP auditable; inference cepat untuk NSGA-II (doc 06 Bag. 8) |
+| 2026-07-11 | Paper karbonasi → **kalkulator deterministik**, bukan ML | Tidak ada data training; koefisien paper: 23 kg CO₂/ton RM, L/S 2:1 |
+| 2026-07-11 | Fitur causticity & mud washing = fallback fisika dulu | Kolom masih konstan di data.csv — menunggu regenerasi Ainin |
+| 2026-07-11 | Demo "real-time" = replay + injeksi gangguan, dibilang jujur | Data tidak punya dimensi waktu |
+| 2026-07-11 | 3 taruhan inovasi: carbon-aware optimization, regret meter, shift-handover report (doc 12) | Pembeda nyata & murah; RL/multi-agent DITOLAK (risiko > nilai) |
+| 2026-07-11 | LLM = provider fleksibel via env (`template`/`ollama`/`groq`/`gemini`), TANPA token berbayar | Tidak ada budget API; laptop 16 GB RAM cukup utk Qwen2.5-7B Q4 lokal; Groq/Gemini free-tier utk demo lebih ngebut kalau ada internet |
+
+## TODO penting (di luar rencana kerja doc 05)
+
+- [ ] **Minta Ainin regenerasi data**: variasikan causticity, Na₂CO₃ conversion,
+  NaOH carbonation, wash water/efficiency; perbaiki digestion eff >100% & make-up negatif
+- [ ] Pastikan `.env` masuk `.gitignore` SEBELUM ada API key Claude ter-commit
+- [ ] Benchmark model di notebook: baseline linear vs LightGBM vs XGBoost vs TabPFN →
+  tabel bukti bahwa pilihan model empiris, bukan default (amunisi jawaban juri)
+- [ ] Siapkan fallback template advisory non-LLM (kalau API down saat demo)
+- [ ] Konfigurasi harga reagen (NaOH USD 400–600/t) supaya OPEX bisa tampil indikatif Rp/USD
+- [ ] Enhancement (kalau waktu ada): model chain per tahap — Model A digestion eff +
+  Model B precipitation yield + neraca massa deterministik; end-to-end tetap sebagai
+  cross-check (doc 06 Bag. 8, "digital twin modular")
+
+## Ide masa depan (pasca-hackathon / kalau menang)
+
+- Soft sensor causticity dilatih dari data historian + LIMS nyata (klaim #2 Ainin penuh)
+- Uncertainty (quantile/conformal) + drift monitoring + MLflow (checklist doc 07)
+- Fitur lag/rolling → model dinamis; jangka panjang: MPC di presipitasi
+- Modul karbonasi diperluas: optimasi suhu karbonasi dari data eksperimen sendiri,
+  integrasi dengan sumber CO₂ flue gas pabrik (bukan CO₂ murni seperti di paper)
+- Multi-site: arsitektur sama untuk pabrik feronikel/smelter lain ANTAM
+
+## Pertanyaan juri yang sudah disiapkan jawabannya
+
+1. "Datanya sintesis, valid?" → doc 05 Fase 5
+2. "Kok R² tinggi?" → surrogate dari simulator; justru alasan butuh pilot data ANTAM
+3. "Scalable ke sistem kami?" → doc 07 (ganti Lapis 0 saja; roadmap 3 fase)
+4. "Keamanannya?" → doc 07 bagian keamanan (read-only, DMZ, human-in-the-loop)
+5. "Kenapa bukan deep learning / model canggih?" → doc 06 Bag. 8 + benchmark notebook

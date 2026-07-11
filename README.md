@@ -1,5 +1,9 @@
-# ANTAM Hackathon — 
+# ANTAM Hackathon — Optimasi Proses Bayer (Bauksit → Alumina)
 
+**Solusi:** *Bayer Process Advisor* — sistem rekomendasi setpoint proses berbasis ML.
+Input: komposisi bauksit yang masuk pabrik. Output: rekomendasi parameter operasi
+(suhu digester, konsentrasi NaOH, ukuran partikel, suhu presipitasi, rasio seed)
+yang **memaksimalkan recovery aluminium, meminimalkan OPEX, dan meminimalkan red mud**.
 
 ## Struktur Folder
 

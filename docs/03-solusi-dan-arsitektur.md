@@ -1,5 +1,9 @@
 # 03 — Solusi yang Diusulkan & Arsitektur Teknis
 
+> ⚠ **Update 2026-07-11:** konsep di sini masih valid sebagai fondasi, tapi arsitektur
+> sudah berevolusi → lihat **doc 09 (arsitektur v2)**, desain UI di **doc 10**,
+> dan konteks CRO dashboard di **doc 06**.
+
 ## Nama kerja: **Bayer Process Advisor** (digital twin + setpoint optimizer)
 
 > Operator memasukkan hasil assay bauksit yang baru datang → sistem merekomendasikan
