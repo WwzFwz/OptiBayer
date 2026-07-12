@@ -7,6 +7,7 @@ backend mana yang aktif.
 from __future__ import annotations
 
 from src import schema
+from src.utils import converters
 
 SEVERITY_ORDER = {"critical": 0, "serious": 1, "warning": 2, "info": 3}
 
@@ -57,13 +58,15 @@ def cards(ctx: dict) -> list[dict]:
             if ca["status"] == "under-dosing"
             else "kapur berlebih → kerak & alumina hilang sebagai TCA"
         )
+        cao_liter = converters.ton_to_liters(ca['cao_recommended_t'])
         out.append({
             "severity": "warning",
             "title": f"Dosis CaO {ca['status']} (estimasi stoikiometri)",
             "impact": f"Risiko: {risiko}",
             "action": (
                 f"{arah} dosis CaO dari {ca['cao_actual_t']:.2f} → "
-                f"{ca['cao_recommended_t']:.2f} t (per basis 100 t bauksit)"
+                f"{ca['cao_recommended_t']:.2f} t (per basis 100 t bauksit) "
+                f"≈ **{cao_liter:,.0f} L slurry/jam**"
             ),
             "why": (
                 f"Estimasi Na₂CO₃ terbentuk {ca['na2co3_est_t']:.2f} t; "

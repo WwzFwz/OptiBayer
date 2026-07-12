@@ -56,6 +56,10 @@ def render(seq: pd.DataFrame, hour: int):
             m2.metric("Δ OPEX (8 jam)", f"{d['total_opex']:+,.0f}")
             m3.metric("Δ Red Mud", f"{d['red_mud_t']:+.1f} t")
             if d["recovery_pct"] > 0 or d["total_opex"] < 0:
+                # Regret score (normalized to max 5% recovery difference)
+                regret_score = min(max(d["recovery_pct"] / 5.0, 0.0), 1.0)
+                st.markdown("**Tingkat Regret (Opportunity Cost):**")
+                st.progress(regret_score)
                 st.warning(
                     f"Dengan setpoint advisory: recovery rata-rata "
                     f"{rg['counterfactual']['recovery_pct']:.1f}% "
@@ -92,6 +96,11 @@ def render(seq: pd.DataFrame, hour: int):
                 report, backend = providers.handover_report(summary)
             st.markdown(report)
             st.caption(f"backend: {backend}")
+            
+            c_dl1, c_dl2 = st.columns(2)
+            c_dl1.download_button("📥 Download Laporan (TXT)", data=report, file_name=f"laporan_shift_jam_{summary['hour_start']}_{summary['hour_end']}.txt", mime="text/plain", use_container_width=True)
+            csv_data = last8.to_csv(index=True).encode('utf-8')
+            c_dl2.download_button("📊 Download Data Shift (CSV)", data=csv_data, file_name=f"data_shift_jam_{summary['hour_start']}_{summary['hour_end']}.csv", mime="text/csv", use_container_width=True)
 
     st.divider()
     st.subheader("📋 Audit Trail Keputusan Operator")

@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from app import ui
+from src.utils import converters
 
 
 def render(row: pd.Series, ctx: dict):
@@ -65,10 +66,12 @@ def render(row: pd.Series, ctx: dict):
     with left, st.container(border=True):
         st.markdown("**CaO (kaustisasi soda mati)**")
         icon = {"sesuai": "🟢", "over-dosing": "🟠", "under-dosing": "🟡"}.get(ca["status"], "⚪")
+        act_l = converters.ton_to_liters(ca['cao_actual_t']) if not pd.isna(ca['cao_actual_t']) else 0
+        rec_l = converters.ton_to_liters(ca['cao_recommended_t'])
         st.markdown(
             f"{icon} Status: **{ca['status']}**  \n"
-            f"Aktual: {ca['cao_actual_t']:.2f} t · Stoikiometrik: "
-            f"{ca['cao_recommended_t']:.2f} t  \n"
+            f"Aktual: {ca['cao_actual_t']:.2f} t ({act_l:,.0f} L/jam) · Stoikiometrik: "
+            f"{ca['cao_recommended_t']:.2f} t ({rec_l:,.0f} L/jam)  \n"
             f"<span style='color:{ui.MUTED}'>Estimasi Na₂CO₃ terbentuk: "
             f"{ca['na2co3_est_t']:.2f} t · reaksi Na₂CO₃ + Ca(OH)₂ → 2NaOH + CaCO₃</span>",
             unsafe_allow_html=True,

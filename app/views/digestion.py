@@ -69,7 +69,17 @@ def render(row: pd.Series, ctx: dict):
     st.plotly_chart(ui.base_layout(fig, height=430), width="stretch")
 
     st.divider()
-    st.subheader("What-if: geser setpoint, lihat prediksi")
+    st.subheader("What-if: geser setpoint & komposisi, lihat prediksi")
+    
+    with st.expander("🔬 Input Komposisi Bauksit (Bauxite Quality)"):
+        st.caption("Ubah kadar bijih untuk melihat simulasi dampak terhadap parameter operasi.")
+        c_comp = st.columns(4)
+        what_if_comp = comp.copy()
+        what_if_comp["al2o3_pct"] = c_comp[0].number_input("Al₂O₃ (%)", min_value=20.0, max_value=80.0, value=float(comp["al2o3_pct"]), step=0.5)
+        what_if_comp["reactive_sio2_pct"] = c_comp[1].number_input("Silika Reaktif (%)", min_value=0.0, max_value=20.0, value=float(comp["reactive_sio2_pct"]), step=0.1)
+        what_if_comp["fe2o3_pct"] = c_comp[2].number_input("Fe₂O₃ (%)", min_value=0.0, max_value=40.0, value=float(comp["fe2o3_pct"]), step=0.5)
+        what_if_comp["tio2_pct"] = c_comp[3].number_input("TiO₂ (%)", min_value=0.0, max_value=10.0, value=float(comp["tio2_pct"]), step=0.1)
+
     cols = st.columns(5)
     what_if = {}
     for col, k in zip(cols, schema.KNOBS):
@@ -79,7 +89,7 @@ def render(row: pd.Series, ctx: dict):
             key=f"whatif_{k}",
         )
     p_now = ctx["predicted_now"]
-    p_new = predict.predict_one(comp, what_if)
+    p_new = predict.predict_one(what_if_comp, what_if)
     m = st.columns(4)
     m[0].metric("Recovery", f"{p_new['recovery_pct']:.1f}%",
                 f"{p_new['recovery_pct'] - p_now['recovery_pct']:+.1f}%")
@@ -91,3 +101,4 @@ def render(row: pd.Series, ctx: dict):
                 delta_color="inverse")
     m[3].metric("Yield Presipitasi", f"{p_new.get('precip_yield_pct', 0):.1f}%",
                 f"{p_new.get('precip_yield_pct', 0) - p_now.get('precip_yield_pct', 0):+.1f}%")
+

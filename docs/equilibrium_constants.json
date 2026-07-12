@@ -1,0 +1,10 @@
+{
+  "source": "Misra & Pearl (1981) - Solubility of gibbsite in alkaline solutions",
+  "formula": "log(Al2O3) = A + B/T_K + C * log10(NaOH_gL)",
+  "coefficients": {
+    "A": 6.2106,
+    "B": -2486.7,
+    "C": 1.0875
+  },
+  "note": "Korelasi ekuilibrium kelarutan gibbsite dalam larutan alkaline. Perlu dikalibrasi dengan data historis aktual pabrik PT ICA untuk penggunaan production."
+}

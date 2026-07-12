@@ -11,7 +11,7 @@ from src.physics import precipitation
 
 
 def render(row: pd.Series, ctx: dict):
-    st.subheader("Kurva Ekuilibrium Gibbsite — gap supersaturasi")
+    st.subheader("Kurva Ekuilibrium Gibbsite — gap supersaturasi", help="Persamaan Misra & Pearl (1981): log(Al₂O₃) = 6.2106 - 2486.7/T(K) + 1.0875 * log10(NaOH g/L). Lihat docs/equilibrium_constants.json")
     st.caption(
         "Overlay fisika (korelasi Misra, belum terkalibrasi pabrik). Gap antara "
         "alumina terlarut (A) dan garis Ceq = driving force presipitasi = "
