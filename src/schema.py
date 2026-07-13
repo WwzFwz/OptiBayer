@@ -64,6 +64,7 @@ _MAP: list[tuple[str, str, str]] = [
     ("steamflashingwater",              "steam_flash",        "constant"),
     ("clarificationprocessefficiency",  "clarif_eff",         "constant"),
     ("freemoisture",                    "free_moisture",      "constant"),
+    ("drybauxitefeedrate",              "feed_rate_t",        "constant"),
     ("naohaffectedbycarbonation",       "naoh_carbonation_frac", "constant"),
     ("washwateraddedtoredmud",          "wash_water_ratio",   "constant"),
     ("redmudwashefficiency",            "wash_eff",           "constant"),
@@ -107,6 +108,8 @@ PHYSICAL_RANGES: dict[str, tuple[float, float]] = {
     "red_mud_t": (0.0, float("inf")),
     "naoh_makeup_t": (0.0, float("inf")),
     "cao_addition_t": (0.0, float("inf")),
+    "feed_rate_t": (0.0, float("inf")),
+    "free_moisture": (0.0, 100.0),
 }
 
 # Label tampilan (Bahasa operator) untuk dashboard.
@@ -129,6 +132,8 @@ LABELS = {
     "al_lost_redmud_t": "Al Hilang ke Red Mud (ton)",
     "naoh_makeup_t": "Make-up NaOH (ton)",
     "cao_addition_t": "Dosis CaO (ton)",
+    "feed_rate_t": "Dry Feed Rate (ton/jam)",
+    "free_moisture": "Moisture (%)",
 }
 
 

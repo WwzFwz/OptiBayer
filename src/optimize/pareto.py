@@ -36,9 +36,10 @@ def guardrail_bounds() -> dict[str, tuple[float, float]]:
 
 
 class _SetpointProblem(Problem):
-    def __init__(self, composition: dict, carbon_price: float):
+    def __init__(self, composition: dict, carbon_price: float, feed_rate: float, moisture: float):
         self.composition = composition
         self.carbon_price = carbon_price
+        self.scale_factor = (feed_rate * (1 - (moisture / 100.0))) / 150.0
         b = guardrail_bounds()
         super().__init__(
             n_var=len(schema.KNOBS),
@@ -50,6 +51,11 @@ class _SetpointProblem(Problem):
     def _evaluate(self, X, out, *args, **kwargs):
         knobs = pd.DataFrame(X, columns=schema.KNOBS)
         pred = predict.predict_frame(predict.frame(self.composition, knobs))
+        
+        # Scale outputs
+        pred["red_mud_t"] *= self.scale_factor
+        pred["total_opex"] *= self.scale_factor
+        
         co2_value = pred["red_mud_t"] * carbonation.CO2_PER_TON_RM * self.carbon_price
         net_opex = pred["total_opex"] - co2_value
         out["F"] = np.column_stack(
@@ -58,9 +64,10 @@ class _SetpointProblem(Problem):
 
 
 def pareto(composition: dict, *, carbon_price: float = DEFAULT_CARBON_PRICE_OPEX,
-           pop: int = 60, gen: int = 40, seed: int = 42) -> pd.DataFrame:
+           pop: int = 60, gen: int = 40, seed: int = 42,
+           feed_rate: float = 150.0, moisture: float = 0.0) -> pd.DataFrame:
     """Pareto front setpoint untuk satu komposisi bauksit."""
-    problem = _SetpointProblem(composition, carbon_price)
+    problem = _SetpointProblem(composition, carbon_price, feed_rate, moisture)
     res = minimize(
         problem,
         NSGA2(pop_size=pop),
@@ -70,6 +77,11 @@ def pareto(composition: dict, *, carbon_price: float = DEFAULT_CARBON_PRICE_OPEX
     )
     knobs = pd.DataFrame(res.X, columns=schema.KNOBS)
     pred = predict.predict_frame(predict.frame(composition, knobs)).reset_index(drop=True)
+    
+    scale_factor = (feed_rate * (1 - (moisture / 100.0))) / 150.0
+    pred["total_opex"] *= scale_factor
+    pred["red_mud_t"] *= scale_factor
+    
     df = pd.concat([knobs.reset_index(drop=True), pred], axis=1)
     df["co2_t"] = df["red_mud_t"] * carbonation.CO2_PER_TON_RM
     df["carbon_value"] = df["co2_t"] * carbon_price
