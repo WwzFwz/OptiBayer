@@ -18,7 +18,7 @@ import pandas as pd
 import streamlit as st
 
 from app import ui
-from app.views import digestion, liquor, overview, precip, redmud
+from app.views import digestion, liquor, overview, pfd, precip, redmud
 from src import capability
 from src.advisory import context as adv_context
 from src.advisory import providers, template
@@ -160,24 +160,26 @@ if providers.provider_name() != "template":
 
 # ---------- tabs = stasiun (doc 10) ----------
 tabs = st.tabs([
-    "📊 Overview", "🔥 Digesti & Pra-desilikasi", "🧪 Liquor Loop (NaOH & CaO)",
-    "❄️ Presipitasi", "♻️ Red Mud & CCUS",
+    "📊 Overview", "🗺 Diagram Proses", "🔥 Digesti & Pra-desilikasi",
+    "🧪 Liquor Loop (NaOH & CaO)", "❄️ Presipitasi", "♻️ Red Mud & CCUS",
 ])
 with tabs[0]:
     overview.render(seq, ss.hour)
 with tabs[1]:
+    pfd.render(row, ctx)
+with tabs[2]:
     if caps["surrogate"]:
         digestion.render(row, ctx)
     else:
         ui.empty_state("Peta operasi", "model surrogate belum terlatih")
-with tabs[2]:
+with tabs[3]:
     if caps["physics_na_balance"]:
         liquor.render(row, ctx)
     else:
         ui.empty_state("Neraca Na", "kolom neraca natrium tidak tersedia di data")
-with tabs[3]:
-    precip.render(row, ctx)
 with tabs[4]:
+    precip.render(row, ctx)
+with tabs[5]:
     if caps["sankey_al"]:
         redmud.render(row, ctx)
     else:
