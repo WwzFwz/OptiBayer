@@ -16,9 +16,9 @@ def render(row: pd.Series, ctx: dict):
 
     st.subheader("Sankey Natrium — ke mana uang NaOH mengalir")
     st.caption(
-        "Basis: ton per ~100 t bauksit kering. Dekomposisi kebocoran = estimasi "
-        "neraca Na ber-asumsi eksplisit (doc 06 Bag. 6 — menunggu data causticity "
-        "bervariasi untuk soft sensor ML)."
+        "Satuan: ton/jam (skala pabrik, dry feed dari data). Dekomposisi "
+        "kebocoran = estimasi neraca Na ber-asumsi eksplisit (doc 06 Bag. 6 — "
+        "menunggu data causticity bervariasi untuk soft sensor ML)."
     )
 
     labels = [

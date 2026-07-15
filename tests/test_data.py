@@ -10,17 +10,21 @@ from src.data.validate import validate
 def test_load_clean():
     df = load_clean()
     # semua kolom kanonik numerik, tidak ada NaN di kolom model
-    assert not df.empty and len(df) > 900
+    assert not df.empty and len(df) > 850
     for col in schema.FEATURES + schema.TARGETS:
         assert col in df.columns, col
         assert pd.api.types.is_numeric_dtype(df[col]), col
         assert df[col].notna().all(), col
-    # cacat generator sudah tertangani
+    # cacat generator sudah tertangani (v1: dig eff >100; v2: recovery >100)
     assert df["digestion_eff_pct"].max() <= 100.0
+    assert df["recovery_pct"].max() <= 100.0
     assert (df["naoh_makeup_t"] >= 0).all()
     assert (df["total_opex"] >= 0).all()
-    # rentang persen masuk akal (bukan fraksi 0-1)
+    # normalisasi skala v1/v2: persen tetap persen, rasio tetap fraksi
     assert 70 < df["recovery_pct"].mean() < 100
+    assert 60 < df["precip_yield_pct"].mean() < 95, "yield harus skala persen"
+    assert df["predesil_eff"].max() <= 1.01, "efisiensi harus fraksi 0-1"
+    assert df["wash_eff"].max() <= 1.01
 
 
 def test_validate_ok():

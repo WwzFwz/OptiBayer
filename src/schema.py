@@ -9,6 +9,15 @@ from __future__ import annotations
 
 import re
 
+import pandas as pd
+
+# CATATAN LINGKUNGAN: pandas>=3.0 mengaktifkan `future.infer_string=True`
+# (Index string via PyArrow) secara default. Kombinasi ini + thread pekerja
+# Streamlit (tiap rerun = thread baru) memicu segfault pada string_arrow saat
+# DataFrame/Index string dibangun berulang dari thread non-utama. Dinonaktifkan
+# di sini — modul pertama yang diimpor hampir semua bagian aplikasi.
+pd.set_option("future.infer_string", False)
+
 # role: input (komposisi bauksit) | knob (bisa dikendalikan) | target (prediksi)
 #       | intermediate (hasil neraca massa) | constant (bernilai tunggal di data
 #       sintesis — dipantau capability, bisa berubah di data asli tahap 2)
@@ -55,6 +64,7 @@ _MAP: list[tuple[str, str, str]] = [
     ("digestionefficiencyofbauxite",    "digestion_eff_pct",  "intermediate"),
     ("totalnaohopex",                   "naoh_opex",          "intermediate"),
     ("totalcaoopex",                    "cao_opex",           "intermediate"),
+    ("alsirati",                        "al_si_ratio",        "intermediate"),
     # --- CONSTANT di data sintesis (capability memantau kalau nanti bervariasi) ---
     ("targetcasiratio",                 "ca_si_ratio",        "constant"),
     ("predesilicationprocessefficiency", "predesil_eff",      "constant"),
@@ -65,6 +75,8 @@ _MAP: list[tuple[str, str, str]] = [
     ("clarificationprocessefficiency",  "clarif_eff",         "constant"),
     ("freemoisture",                    "free_moisture",      "constant"),
     ("drybauxitefeedrate",              "feed_rate_t",        "constant"),
+    ("bauxitefeedrate",                 "wet_feed_rate_t",    "constant"),
+    ("moistureinbauxite",               "feed_moisture_frac", "constant"),
     ("naohaffectedbycarbonation",       "naoh_carbonation_frac", "constant"),
     ("washwateraddedtoredmud",          "wash_water_ratio",   "constant"),
     ("redmudwashefficiency",            "wash_eff",           "constant"),
@@ -134,6 +146,17 @@ LABELS = {
     "cao_addition_t": "Dosis CaO (ton)",
     "feed_rate_t": "Dry Feed Rate (ton/jam)",
     "free_moisture": "Moisture (%)",
+    "wet_feed_rate_t": "Wet Feed Rate (ton/jam)",
+    "feed_moisture_frac": "Moisture Bauksit (fraksi)",
+    "al_si_ratio": "Rasio Al/Si",
+    "fe2o3_pct": "Fe₂O₃ — Hematit, inert (%)",
+    "tio2_pct": "TiO₂ — Rutil/Anatas, inert (%)",
+    "cao_pct": "CaO — Kapur, inert (%)",
+    "mgo_pct": "MgO — Magnesia, inert (%)",
+    "na2o_pct": "Na₂O — Soda, inert (%)",
+    "k2o_pct": "K₂O — Kalium Oksida, inert (%)",
+    "cr2o3_pct": "Cr₂O₃ — Krom Oksida, inert (%)",
+    "others_pct": "Lain-lain / LOI (%)",
 }
 
 

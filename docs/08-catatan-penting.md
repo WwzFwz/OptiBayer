@@ -23,6 +23,37 @@ memberikan data sebenarnya yang lebih lengkap. Konsekuensi desain (WAJIB, bukan 
 6. Jangan menghabiskan waktu menyempurnakan akurasi di data sintesis — dia hanya
    scaffolding. Prioritas: pipeline & dashboard yang siap menelan data apa pun.
 
+## ⚠️ Insiden data v2 & perbaikannya (2026-07-15)
+
+**Temuan:** data.csv v2 (ekspor macro VBA xlsm UPDATED, skala pabrik 1000 t/jam
+basah / moisture 20% / 800 kering) **tidak konsisten antar-kolom dalam satu
+baris** — korelasi silika vs recovery = +0.01 (harusnya ≈ −0.91), semua model
+R² negatif. Akar masalah di macro: `Application.Calculation = xlCalculationManual`
++ hanya satu pass `wsCalc.Calculate` per sheet, padahal workbook punya referensi
+melingkar spent-liquor yang butuh iterative calculation — nilai output disalin
+SEBELUM konvergen, jadi tercampur sisa iterasi baris sebelumnya.
+
+**Perbaikan di repo:** `src/data/rebuild_targets.py` menghitung ulang seluruh
+kolom output dari kolom input memakai `src/physics/mass_balance.py` (port
+literal formula workbook, tervalidasi <0.11% pada data v1), format & posisi
+kolom dipertahankan persis. Ekspor asli disimpan sebagai
+`data/raw/data_v2_ekspor_asli.csv` (bukti). Hasil: 997/1000 baris valid,
+R² kembali 0.95–0.999, SHAP gate lulus (silika dominan, corr −0.908).
+
+**PR untuk Ainin (perbaikan di sisi Excel, untuk ekspor berikutnya):**
+1. File > Options > Formulas > centang **Enable iterative calculation**.
+2. Di macro, ganti loop `wsCalc.Calculate` per sheet dengan beberapa kali
+   `Application.Calculate` sampai sel monitor stabil, SEBELUM menyalin baris.
+3. Verifikasi cepat setelah export: korelasi kolom silika vs recovery harus
+   kuat negatif (≈ −0.9). Kalau ≈ 0, ekspornya masih tercampur.
+
+**Perubahan teknis ikutan (data v2):** adapter kini otomatis mendeteksi
+format v1/v2 (persen vs fraksi, clip recovery >100%); `mass_balance.run()`
+& Prediction Lab mendukung what-if **feed rate & moisture** (Dashboard!C6/C7,
+linear terhadap dry feed — permintaan tim); `na_balance` berbasis
+`feed_rate_t` dari data; scaling lama `/150` di pareto dihapus (data sudah
+skala pabrik).
+
 ## Keputusan yang sudah diambil (dan alasannya)
 
 | Tanggal | Keputusan | Alasan |

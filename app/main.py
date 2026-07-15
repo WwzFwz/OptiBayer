@@ -6,9 +6,18 @@ Jalankan:  python -m streamlit run app/main.py
 
 from __future__ import annotations
 
+import os
 import sys
 import time
 from pathlib import Path
+
+# CATATAN LINGKUNGAN: PyArrow (dipakai pandas>=3.0 & internal st.dataframe)
+# default ke allocator 'mimalloc', yang di beberapa lingkungan sandbox/container
+# menyebabkan segfault saat diakses dari thread rerun Streamlit (setiap rerun
+# = thread baru). HARUS di-set SEBELUM pandas/streamlit/pyarrow ter-import.
+# Allocator 'system' sedikit lebih lambat tapi jauh lebih portabel — dampak
+# performa untuk ukuran data aplikasi ini (ribuan baris) tidak signifikan.
+os.environ.setdefault("ARROW_DEFAULT_MEMORY_POOL", "system")
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -18,7 +27,7 @@ import pandas as pd
 import streamlit as st
 
 from app import ui
-from app.views import digestion, liquor, overview, precip, redmud
+from app.views import digestion, liquor, overview, precip, prediction_lab, redmud
 from src import capability
 from src.advisory import context as adv_context
 from src.advisory import providers, template
@@ -161,10 +170,10 @@ if providers.provider_name() != "template":
 # ---------- tabs = stasiun (doc 10) ----------
 tabs = st.tabs([
     "📊 Overview", "🔥 Digesti & Pra-desilikasi", "🧪 Liquor Loop (NaOH & CaO)",
-    "❄️ Presipitasi", "♻️ Red Mud & CCUS",
+    "❄️ Presipitasi", "♻️ Red Mud & CCUS", "🧠 Prediction Lab (What-If)",
 ])
 with tabs[0]:
-    overview.render(seq, ss.hour)
+    overview.render(df, seq, ss.hour)
 with tabs[1]:
     if caps["surrogate"]:
         digestion.render(row, ctx)
@@ -182,6 +191,11 @@ with tabs[4]:
         redmud.render(row, ctx)
     else:
         ui.empty_state("Sankey Al", "kolom neraca aluminium tidak tersedia")
+with tabs[5]:
+    if caps["surrogate"]:
+        prediction_lab.render(df)
+    else:
+        ui.empty_state("Prediction Lab", "model surrogate belum terlatih")
 
 # ---------- auto play ----------
 if ss.playing:
