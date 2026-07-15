@@ -26,6 +26,7 @@ from plotly.subplots import make_subplots
 
 from app import ui
 from src import capability, schema
+from src.models import predict as mpredict
 from src.advisory import providers
 from src.optimize import regret
 from src.physics import na_balance
@@ -78,12 +79,40 @@ def _trend_section(seq: pd.DataFrame, hour: int) -> None:
     )
     cols = ["recovery_pct", "total_opex", "red_mud_t", "reactive_sio2_pct"]
     grid = st.columns(2)
+
+    # overlay khusus recovery: garis prediksi model + penanda anomali residual
+    pred_rec, resid_std = None, 0.0
+    try:
+        pred_rec = mpredict.predict_frame(seq[list(schema.FEATURES)])["recovery_pct"]
+        resid_std = float(
+            mpredict.meta("recovery_pct")["metrics"]["cv_resid_std"]
+        )
+    except FileNotFoundError:
+        pass
+
     for i, col in enumerate(cols):
         fig = ui.trend(
             seq.index, seq[col], TREND_TITLES[col],
             band=BANDS[col], color=ui.SERIES[i % len(ui.SERIES)],
             height=230, title=TREND_TITLES[col],
         )
+        if col == "recovery_pct" and pred_rec is not None:
+            fig.add_trace(go.Scatter(
+                x=list(seq.index), y=list(pred_rec), name="Prediksi model",
+                mode="lines", line=dict(color=ui.INK2, width=1.5, dash="dot"),
+                hovertemplate="%{y:.2f}<extra>prediksi</extra>",
+            ))
+            if resid_std > 0:
+                resid = (seq[col] - pred_rec).abs()
+                anom = seq.index[resid > 3 * resid_std]
+                if len(anom):
+                    fig.add_trace(go.Scatter(
+                        x=list(anom), y=list(seq.loc[anom, col]),
+                        name="Anomali", mode="markers",
+                        marker=dict(color=ui.STATUS["critical"], size=9,
+                                    symbol="diamond-open"),
+                        hovertemplate="anomali: %{y:.2f}<extra></extra>",
+                    ))
         fig.add_vline(x=hour, line=dict(color=ui.INK, width=1.5, dash="dash"))
         fig.add_trace(go.Scatter(
             x=[hour], y=[seq[col].iloc[hour]], mode="markers",
@@ -93,7 +122,7 @@ def _trend_section(seq: pd.DataFrame, hour: int) -> None:
         grid[i % 2].plotly_chart(fig, width="stretch", key=f"trend_{col}")
 
     events = _events(seq)
-    with st.expander(f"📋 Log kejadian ({len(events)} tercatat)", expanded=False):
+    with st.expander(f"Log kejadian ({len(events)} tercatat)", expanded=False):
         if not events:
             st.caption("Tidak ada kejadian di luar ambang pada jendela ini.")
         else:
@@ -143,7 +172,7 @@ def _scatter_grid(df: pd.DataFrame, target: str) -> go.Figure:
         r, c = divmod(i, n_cols)
         x = df[feat].to_numpy(dtype=float)
         fig.add_trace(
-            go.Scattergl(
+            go.Scatter(
                 x=x, y=x_t, mode="markers",
                 marker=dict(size=4, color=ui.SERIES[0], opacity=0.45),
                 hovertemplate=f"{schema.label(feat)}: %{{x:.2f}}<br>"
@@ -188,7 +217,7 @@ def _correlation_section(df: pd.DataFrame) -> None:
         )
         xv = df[feat].to_numpy(dtype=float)
         yv = df[target].to_numpy(dtype=float)
-        fig = go.Figure(go.Scattergl(
+        fig = go.Figure(go.Scatter(
             x=xv, y=yv, mode="markers",
             marker=dict(color=ui.SERIES[0], size=5, opacity=0.5),
             hovertemplate=f"{schema.label(feat)}: %{{x:.2f}}<br>"
@@ -208,7 +237,7 @@ def _correlation_section(df: pd.DataFrame) -> None:
                                         title=f"{schema.label(feat)} vs {schema.label(target)}"),
                          width="stretch", key="ov_scatter_single")
 
-    with st.expander("🔬 Lihat scatter SEMUA fitur sekaligus (grid kecil)"):
+    with st.expander("Lihat scatter SEMUA fitur sekaligus (grid kecil)"):
         st.plotly_chart(_scatter_grid(df, target), width="stretch", key="ov_scatter_grid")
 
 
@@ -280,12 +309,14 @@ def _regret_handover_section(df: pd.DataFrame, seq: pd.DataFrame, hour: int) -> 
     )
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("📐 Hitung regret 8 jam terakhir", width="stretch"):
+        if st.button("Hitung regret 8 jam terakhir", width="stretch"):
             lo = max(0, hour - 7)
             window = seq.iloc[lo:hour + 1]
             with st.spinner("Menjalankan optimizer pada 8 jam terakhir..."):
                 rg = regret.shift_regret(window)
+                series = regret.shift_series(window)
             st.session_state["_ov_regret"] = rg
+            st.session_state["_ov_regret_series"] = series
         rg = st.session_state.get("_ov_regret")
         if rg:
             a, cf = rg["actual"], rg["counterfactual"]
@@ -297,9 +328,29 @@ def _regret_handover_section(df: pd.DataFrame, seq: pd.DataFrame, hour: int) -> 
             st.metric("Red mud aktual vs optimal (kumulatif)",
                       f"{a['red_mud_t']:,.1f} t", f"{cf['red_mud_t']-a['red_mud_t']:+,.1f} t vs optimal",
                       delta_color="inverse")
+            series = st.session_state.get("_ov_regret_series")
+            if series is not None and len(series):
+                fig_cf = go.Figure()
+                fig_cf.add_trace(go.Scatter(
+                    x=series["sim_hour"], y=series["actual"], name="Aktual",
+                    mode="lines", line=dict(color=ui.SERIES[0], width=2),
+                    hovertemplate="%{y:.2f}%<extra>aktual</extra>",
+                ))
+                fig_cf.add_trace(go.Scatter(
+                    x=series["sim_hour"], y=series["counterfactual"],
+                    name="Jika advisory diikuti", mode="lines",
+                    line=dict(color=ui.STATUS["good"], width=2, dash="dash"),
+                    fill="tonexty", fillcolor="rgba(12,163,12,0.15)",
+                    hovertemplate="%{y:.2f}%<extra>counterfactual</extra>",
+                ))
+                ui.base_layout(
+                    fig_cf, height=230,
+                    title="Recovery: aktual vs counterfactual (area = regret)",
+                )
+                st.plotly_chart(fig_cf, width="stretch", key="ov_regret_chart")
 
     with c2:
-        if st.button("📝 Buat draf laporan serah-terima shift", width="stretch"):
+        if st.button("Buat draf laporan serah-terima shift", width="stretch"):
             lo = max(0, hour - 7)
             window = seq.iloc[lo:hour + 1]
             stats = {
@@ -345,8 +396,8 @@ def render(df: pd.DataFrame, seq: pd.DataFrame, hour: int) -> None:
     row = seq.iloc[hour]
 
     t1, t2, t3 = st.tabs([
-        "📈 Tren Historis", "🔬 Korelasi & Scatter (Input vs Target)",
-        "⚖️ Neraca Material Masuk-Keluar",
+        ":material/show_chart: Tren Historis", ":material/scatter_plot: Korelasi & Scatter",
+        ":material/balance: Neraca Material",
     ])
     with t1:
         _trend_section(seq, hour)

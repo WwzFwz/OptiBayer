@@ -33,13 +33,13 @@ def render(row: pd.Series, ctx: dict):
     ))
     st.plotly_chart(ui.base_layout(fig, height=340), width="stretch")
     st.caption(
-        f"Ton Al per basis ~100 t bauksit. Hilang ke red mud: "
+        f"Satuan: ton Al/jam (skala pabrik). Hilang ke red mud: "
         f"**{al_lost:.1f} t Al** ({al_lost / al_feed * 100:.1f}% feed) — "
         "setiap ton ini juga menaikkan alkalinitas & volume tailing."
     )
 
     st.divider()
-    st.subheader("♻️ Karbonasi Akuatik Langsung — red mud sebagai sink CO₂")
+    st.subheader("Karbonasi Akuatik Langsung — red mud sebagai sink CO₂")
     st.caption(
         "Kalkulator deterministik dari paper ScienceDirect 2026 "
         "(2.3 g CO₂/100 g RM · L/S 2:1 · mass loss 14.19% vs 10.74%)."

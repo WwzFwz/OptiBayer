@@ -113,7 +113,7 @@ def _readout(fig, x, y, label, value, *, color=VALUE_COLOR):
 
 
 def render(row: pd.Series, ctx: dict):
-    st.subheader("🗺 Diagram Proses — Sirkuit Bayer (HMI live)")
+    st.subheader("Diagram Proses — Sirkuit Bayer (HMI live)")
 
     nb = ctx["na_balance"]
     sio2 = float(row["reactive_sio2_pct"])

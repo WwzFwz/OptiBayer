@@ -82,7 +82,7 @@ ss.setdefault("scenario", replay.SCENARIOS[0])
 
 # ---------- sidebar: kendali replay & prioritas ----------
 with st.sidebar:
-    st.markdown("## 🏭 AI RED MUD")
+    st.markdown("## AI RED MUD")
     st.caption("Bayer Process Advisor — demo replay (streaming-ready, doc 07)")
 
     scenario = st.selectbox("Skenario replay", replay.SCENARIOS,
@@ -123,7 +123,7 @@ ctx = _context(ss.scenario, ss.hour, weights)
 
 # ---------- header ----------
 st.markdown(
-    f"### 🏭 AI RED MUD · Pabrik Alumina — Konsol CRO  "
+    f"### AI RED MUD · Pabrik Alumina — Konsol CRO  "
     f"<span style='color:{ui.MUTED};font-size:0.7em'>Shift "
     f"{ss.hour // 8 % 3 + 1} · Jam simulasi {ss.hour:02d}:00 · "
     f"Skenario: {ss.scenario}</span>",
@@ -156,13 +156,13 @@ ui.kpi(k[4], "Potensi CO₂ capture", f"{co2_now:.2f} t", "good")
 ui.kpi(k[5], "Causticity", f"{row.get('causticity', 0.85):.2f}", "good")
 
 # ---------- advisory (selalu terlihat, doc 10) ----------
-st.markdown("#### ⚡ Advisory")
+st.markdown("#### Advisory")
 cards = template.cards(ctx)
 for i, card in enumerate(cards[:3]):
     ui.advisory_card(card, key=f"{ss.hour}_{i}")
 
 if providers.provider_name() != "template":
-    with st.expander("🤖 Narasi advisory (LLM)"):
+    with st.expander(":material/smart_toy: Narasi advisory (LLM)"):
         if st.button("Generate narasi"):
             text, backend = providers.advise(ctx)
             st.markdown(text)
@@ -170,9 +170,13 @@ if providers.provider_name() != "template":
 
 # ---------- tabs = stasiun (doc 10) ----------
 tabs = st.tabs([
-    "📊 Overview", "🗺 Diagram Proses", "🔥 Digesti & Pra-desilikasi",
-    "🧪 Liquor Loop (NaOH & CaO)", "❄️ Presipitasi", "♻️ Red Mud & CCUS",
-    "🧠 Prediction Lab (What-If)",
+    ":material/monitoring: Overview",
+    ":material/account_tree: Diagram Proses",
+    ":material/local_fire_department: Digesti",
+    ":material/science: Liquor Loop",
+    ":material/ac_unit: Presipitasi",
+    ":material/recycling: Red Mud & CCUS",
+    ":material/biotech: Prediction Lab",
 ])
 with tabs[0]:
     overview.render(df, seq, ss.hour)
