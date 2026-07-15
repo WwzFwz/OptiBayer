@@ -105,6 +105,14 @@ def _set_core_theme(mode: str) -> None:
         pass
 
 
+# Pengaman modul-basi: server Streamlit yang hidup sejak sebelum update kode
+# menyimpan modul lama di sys.modules (script di-rerun, modul TIDAK di-reimport).
+# Kalau ui versi lama (belum punya apply), paksa reload sebelum dipakai.
+if not hasattr(ui, "apply"):
+    import importlib
+
+    importlib.reload(ui)
+
 ui.apply(ss.theme_mode)  # palet chart mengikuti mode SEBELUM view dirender
 
 # ---------- sidebar: kendali replay & prioritas ----------
