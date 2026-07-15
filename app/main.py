@@ -271,7 +271,7 @@ page = nav_sel or ui.NAV_LABELS["overview"]
 if page == ui.NAV_LABELS["overview"]:
     overview.render(df, seq, ss.hour)
 elif page == ui.NAV_LABELS["pfd"]:
-    pfd.render(row, ctx)
+    pfd.render(row, ctx, hist=seq.iloc[: ss.hour + 1])
 elif page == ui.NAV_LABELS["digestion"]:
     if caps["surrogate"]:
         digestion.render(row, ctx)
