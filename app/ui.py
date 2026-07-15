@@ -96,9 +96,14 @@ def inject_css(mode: str) -> None:
     .stButton button[kind="primary"]:hover {
         background-color: #0b8f0b; border-color: #0b8f0b; color: #ffffff;
     }
-    /* stat tile KPI: kartu rapat, nilai menonjol */
+    /* stat tile KPI: kartu rapat, nilai menonjol, tinggi seragam */
     [data-testid="stMetricValue"] { font-size: 1.75rem; font-weight: 700; }
     [data-testid="stMetricDelta"] { font-size: 0.85rem; }
+    [class*="st-key-kpi_"] { min-height: 8.2rem; text-align: center; }
+    [class*="st-key-kpi_"] [data-testid="stMetricValue"] { justify-content: center; }
+    [class*="st-key-kpi_"] [data-testid="stMetricValue"] > div { width: auto; }
+    [class*="st-key-kpi_"] [data-testid="stMetricDelta"] { justify-content: center; }
+    [class*="st-key-kpi_"] [data-testid="stMetric"] { text-align: center; }
     /* tombol Tolak (key rej_*) = destruktif -> merah outline, penuh saat hover */
     [class*="st-key-rej_"] button {
         border: 1px solid #d03b3b; color: #d03b3b;
@@ -184,7 +189,8 @@ def kpi(col, label: str, value: str, status: str, delta: str | None = None,
     `invert=True` untuk metrik yang NAIK = BURUK (OPEX, red mud, silika):
     panah naik jadi merah, turun jadi hijau.
     """
-    with col.container(border=True):
+    slug = "".join(ch if ch.isalnum() else "_" for ch in label.lower())
+    with col.container(border=True, key=f"kpi_{slug}"):
         st.markdown(
             f"<span style='color:{STATUS[status]};font-size:0.7em'>●</span> "
             f"<span style='color:{MUTED};font-size:0.78em;font-weight:600;"
@@ -194,6 +200,12 @@ def kpi(col, label: str, value: str, status: str, delta: str | None = None,
         st.metric(label, value, delta=delta,
                   delta_color="inverse" if invert else "normal",
                   label_visibility="collapsed")
+        if delta is None:
+            # placeholder setinggi baris delta -> semua kartu KPI sama tinggi
+            st.markdown(
+                f"<span style='font-size:0.85rem;color:{MUTED}'>&nbsp;</span>",
+                unsafe_allow_html=True,
+            )
 
 
 def _persist_decision(hour: int, title: str, decision: str) -> None:
