@@ -123,16 +123,7 @@ with st.sidebar:
     st.markdown("## AI RED MUD")
     st.caption("Bayer Process Advisor — demo replay (streaming-ready, doc 07)")
 
-    light_on = st.toggle(
-        "Mode terang", value=(ss.theme_mode == "light"),
-        help="Tema putih untuk ruangan terang; chart & diagram ikut menyesuaikan",
-    )
-    _new_mode = "light" if light_on else "dark"
-    if _new_mode != ss.theme_mode:
-        ss.theme_mode = _new_mode
-        _set_core_theme(_new_mode)
-        st.rerun()
-
+    st.markdown("**Skenario Demo**")
     scenario = st.selectbox("Skenario replay", replay.SCENARIOS,
                             index=replay.SCENARIOS.index(ss.scenario))
     if scenario != ss.scenario:
@@ -167,6 +158,18 @@ with st.sidebar:
     weights = (w_rec / total_w, w_opx / total_w, w_rm / total_w)
 
     st.divider()
+    st.markdown("**Tampilan**")
+    light_on = st.toggle(
+        "Mode terang", value=(ss.theme_mode == "light"),
+        help="Tema putih untuk ruangan terang; chart & diagram ikut menyesuaikan",
+    )
+    _new_mode = "light" if light_on else "dark"
+    if _new_mode != ss.theme_mode:
+        ss.theme_mode = _new_mode
+        _set_core_theme(_new_mode)
+        st.rerun()
+
+    st.divider()
     st.caption(
         f"Advisory backend: **{providers.provider_name()}** "
         "(ubah via env `LLM_PROVIDER`)  \n"
@@ -178,11 +181,14 @@ row = seq.iloc[ss.hour]
 ctx = _context(ss.scenario, ss.hour, weights)
 
 # ---------- header ----------
+# jam simulasi kumulatif (0-95) -> tampilan manusiawi: Hari N · HH:00 · Shift
+_day = ss.hour // 24 + 1
+_clock = ss.hour % 24
+_shift = _clock // 8 + 1
 st.markdown(
     f"### AI RED MUD · Pabrik Alumina — Konsol CRO  "
-    f"<span style='color:{ui.MUTED};font-size:0.7em'>Shift "
-    f"{ss.hour // 8 % 3 + 1} · Jam simulasi {ss.hour:02d}:00 · "
-    f"Skenario: {ss.scenario}</span>",
+    f"<span style='color:{ui.MUTED};font-size:0.7em'>Hari {_day} · "
+    f"{_clock:02d}:00 · Shift {_shift} · Skenario: {ss.scenario}</span>",
     unsafe_allow_html=True,
 )
 
