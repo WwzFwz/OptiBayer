@@ -1,4 +1,18 @@
-# 15 — Audit UI/UX (2026-07-15)
+# 15 — Audit UI/UX (2026-07-15, diperbarui malam)
+
+## Update status (pasca paket navigasi & tema)
+- ✅ 🔴3 latency: segmented control hanya merender halaman aktif → rerun ringan
+- ✅ 🟡5 onboarding: banner + tombol "Mulai demo Silika Spike"
+- ✅ 🟡6 feedback aksi: Terima hijau / Tolak merah + ikon; terkunci jadi badge
+  DITERIMA/DITOLAK setelah diputuskan (anti klik ganda)
+- ✅ 🟡7 (sebagian) navigasi silang: advisory → "Lihat peta operasi";
+  sidebar → "Muat jam ini → Prediction Lab". PFD klik-stasiun masih roadmap
+  (bisa via st.plotly_chart on_select + ui.goto — ±2 jam)
+- ✅ toggle dark/light penuh (CSS) + dipisah ke seksi "Tampilan" di sidebar
+- ✅ jam simulasi 46:00 → "Hari 2 · 22:00 · Shift 3"
+- Masih terbuka: 🔴1 redundansi Sankey/what-if (butuh keputusan tim),
+  🔴2 sentralisasi ambang alarm, 🟡4 label mata uang OPEX, 🟡8 layar 1366px,
+  🟡9 bahasa campur
 
 > Diaudit terhadap acceptance test doc 10 §5 + praktik konsol CRO.
 > Skala: 🔴 perlu sebelum demo · 🟡 bagus kalau sempat · 🟢 sudah beres.

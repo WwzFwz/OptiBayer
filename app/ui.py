@@ -96,6 +96,14 @@ def inject_css(mode: str) -> None:
     .stButton button[kind="primary"]:hover {
         background-color: #0b8f0b; border-color: #0b8f0b; color: #ffffff;
     }
+    /* tombol Tolak (key rej_*) = destruktif -> merah outline, penuh saat hover */
+    [class*="st-key-rej_"] button {
+        border: 1px solid #d03b3b; color: #d03b3b;
+    }
+    [class*="st-key-rej_"] button p { color: inherit; }
+    [class*="st-key-rej_"] button:hover {
+        background-color: #d03b3b; border-color: #d03b3b; color: #ffffff;
+    }
     </style>
     """
     light = """
