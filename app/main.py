@@ -227,13 +227,14 @@ k = st.columns(6)
 ui.kpi(k[0], "Recovery Al", f"{row['recovery_pct']:.1f}%",
        ui.status_of(row["recovery_pct"], (85, 101), (82, 85)), _delta("recovery_pct"))
 ui.kpi(k[1], "OPEX / jam", f"{row['total_opex']:,.0f}",
-       ui.status_of(-row["total_opex"], (-2500, 0), (-3400, -2500)),
-       _delta("total_opex", "{:+,.0f}"))
+       ui.status_of(-row["total_opex"], (-25000, 0), (-40000, -25000)),
+       _delta("total_opex", "{:+,.0f}"), invert=True)
 ui.kpi(k[2], "Silika Reaktif", f"{row['reactive_sio2_pct']:.1f}%",
        ui.status_of(-row["reactive_sio2_pct"], (-5.5, 0), (-6.3, -5.5)),
-       _delta("reactive_sio2_pct"))
+       _delta("reactive_sio2_pct"), invert=True)
 ui.kpi(k[3], "Red Mud", f"{row['red_mud_t']:.1f} t",
-       ui.status_of(-row["red_mud_t"], (-75, 0), (-85, -75)), _delta("red_mud_t"))
+       ui.status_of(-row["red_mud_t"], (-500, 0), (-580, -500)),
+       _delta("red_mud_t"), invert=True)
 ui.kpi(k[4], "Potensi CO₂ capture", f"{co2_now:.2f} t", "good")
 ui.kpi(k[5], "Causticity", f"{row.get('causticity', 0.85):.2f}", "good")
 

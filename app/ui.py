@@ -96,6 +96,9 @@ def inject_css(mode: str) -> None:
     .stButton button[kind="primary"]:hover {
         background-color: #0b8f0b; border-color: #0b8f0b; color: #ffffff;
     }
+    /* stat tile KPI: kartu rapat, nilai menonjol */
+    [data-testid="stMetricValue"] { font-size: 1.75rem; font-weight: 700; }
+    [data-testid="stMetricDelta"] { font-size: 0.85rem; }
     /* tombol Tolak (key rej_*) = destruktif -> merah outline, penuh saat hover */
     [class*="st-key-rej_"] button {
         border: 1px solid #d03b3b; color: #d03b3b;
@@ -174,9 +177,23 @@ def status_of(value: float, good: tuple[float, float],
     return "critical"
 
 
-def kpi(col, label: str, value: str, status: str, delta: str | None = None):
-    icon = {"good": "🟢", "warning": "🟡", "serious": "🟠", "critical": "🔴"}[status]
-    col.metric(f"{icon} {label}", value, delta=delta)
+def kpi(col, label: str, value: str, status: str, delta: str | None = None,
+        *, invert: bool = False):
+    """Stat tile ber-kartu: titik status vektor + label + nilai + delta.
+
+    `invert=True` untuk metrik yang NAIK = BURUK (OPEX, red mud, silika):
+    panah naik jadi merah, turun jadi hijau.
+    """
+    with col.container(border=True):
+        st.markdown(
+            f"<span style='color:{STATUS[status]};font-size:0.7em'>●</span> "
+            f"<span style='color:{MUTED};font-size:0.78em;font-weight:600;"
+            f"letter-spacing:0.05em'>{label.upper()}</span>",
+            unsafe_allow_html=True,
+        )
+        st.metric(label, value, delta=delta,
+                  delta_color="inverse" if invert else "normal",
+                  label_visibility="collapsed")
 
 
 def _persist_decision(hour: int, title: str, decision: str) -> None:

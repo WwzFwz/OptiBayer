@@ -31,10 +31,11 @@ from src.advisory import providers
 from src.optimize import regret
 from src.physics import na_balance
 
+# pita operasi aman — skala pabrik data v2 (OPEX ~1k-54k/jam, red mud ~240-640 t)
 BANDS = {
     "recovery_pct": (85.0, 100.0),
-    "total_opex": (0.0, 2500.0),
-    "red_mud_t": (0.0, 75.0),
+    "total_opex": (0.0, 25000.0),
+    "red_mud_t": (0.0, 500.0),
     "reactive_sio2_pct": (0.0, 5.5),
 }
 TREND_TITLES = {
