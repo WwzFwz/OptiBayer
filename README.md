@@ -57,6 +57,7 @@ antam-hackathon/
 
 > 📖 **Baru clone repo? Ikuti [docs/13-panduan-setup.md](docs/13-panduan-setup.md)** —
 > setup 5 menit, tur semua fitur, setup LLM gratis, troubleshooting.
+> Mau di-deploy supaya juri dapat link? **[docs/16-tutorial-deploy.md](docs/16-tutorial-deploy.md)**.
 
 ## Mulai dari mana?
 
