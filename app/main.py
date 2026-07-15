@@ -240,8 +240,17 @@ ui.kpi(k[5], "Causticity", f"{row.get('causticity', 0.85):.2f}", "good")
 # ---------- advisory (selalu terlihat, doc 10) ----------
 st.markdown("#### Advisory")
 cards = template.cards(ctx)
+# 3 terpenting selalu tampil (anti alarm-fatigue); sisanya tetap bisa diakses
 for i, card in enumerate(cards[:3]):
     ui.advisory_card(card, key=f"{ss.hour}_{i}")
+if len(cards) > 3:
+    _extra = cards[3:]
+    with st.expander(
+        f":material/expand_more: Lihat {len(_extra)} advisory lainnya "
+        f"(prioritas lebih rendah)"
+    ):
+        for i, card in enumerate(_extra, start=3):
+            ui.advisory_card(card, key=f"{ss.hour}_{i}")
 
 if providers.provider_name() != "template":
     with st.expander(":material/smart_toy: Narasi advisory (LLM)"):
