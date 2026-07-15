@@ -65,7 +65,7 @@ def cards(ctx: dict) -> list[dict]:
             "impact": f"Risiko: {risiko}",
             "action": (
                 f"{arah} dosis CaO dari {ca['cao_actual_t']:.2f} → "
-                f"{ca['cao_recommended_t']:.2f} t (per basis 100 t bauksit) "
+                f"{ca['cao_recommended_t']:.2f} t/jam "
                 f"≈ **{cao_liter:,.0f} L slurry/jam**"
             ),
             "why": (

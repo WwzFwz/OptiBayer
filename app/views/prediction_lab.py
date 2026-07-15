@@ -43,7 +43,7 @@ SCALED_TARGETS = ("total_opex", "red_mud_t")  # target persen bebas skala
 
 def _feed_inputs() -> tuple[float, float]:
     """What-if laju umpan & moisture bauksit (Dashboard!C6/C7 di xlsm)."""
-    st.markdown("##### 🚚 Laju Umpan Bauksit (what-if skala pabrik)")
+    st.markdown("##### Laju Umpan Bauksit (what-if skala pabrik)")
     c = st.columns(3)
     wet = c[0].number_input(
         "Wet Feed Rate (t/jam)", min_value=100.0, max_value=5000.0,
@@ -94,16 +94,16 @@ def _apply_row(row: pd.Series) -> None:
 
 
 def _composition_inputs(df: pd.DataFrame) -> tuple[dict[str, float], float]:
-    st.markdown("##### 🪨 Komposisi Bauksit Masuk")
+    st.markdown("##### Komposisi Bauksit Masuk")
     st.caption(
         "9 oksida di bawah bisa diatur bebas; **Lain-lain/LOI otomatis "
         "= sisa hingga 100%** — konvensi yang sama dipakai kalkulator Excel "
         "asli saat membangun data latih."
     )
     b1, b2, b3 = st.columns(3)
-    if b1.button("🎲 Sampel acak dari histori", width="stretch"):
+    if b1.button("Sampel acak dari histori", width="stretch"):
         _apply_row(df.sample(1).iloc[0])
-    if b2.button("↺ Reset ke rata-rata historis", width="stretch"):
+    if b2.button("Reset ke rata-rata historis", width="stretch"):
         _apply_row(df[list(schema.INPUTS) + list(schema.KNOBS)].mean())
     show_grid = b3.toggle("Tampilkan grid 3×3", value=True)
 
@@ -145,7 +145,7 @@ def _composition_inputs(df: pd.DataFrame) -> tuple[dict[str, float], float]:
 
 
 def _knob_inputs(df: pd.DataFrame) -> dict[str, float]:
-    st.markdown("##### ⚙️ Parameter Proses")
+    st.markdown("##### Parameter Proses")
     cols = st.columns(5)
     knobs = {}
     for i, k in enumerate(schema.KNOBS):
@@ -161,17 +161,17 @@ def _bounds_warning(comp: dict, knobs: dict) -> None:
     out = [schema.label(f) for f, ok in wb.items() if not ok]
     if out:
         st.warning(
-            "⚠️ **Ekstrapolasi** — di luar rentang data latih model utk: "
+            "**Ekstrapolasi** — di luar rentang data latih model utk: "
             + ", ".join(out) + ". Prediksi ML pada titik ini kurang bisa "
             "dipercaya; kalkulator fisika di bawah tetap berlaku penuh "
             "(deterministik, bukan hasil belajar dari data).",
-            icon="🧭",
+            icon=":material/explore:",
         )
 
 
 def _prediction_comparison(comp: dict, knobs: dict,
                            wet_feed_t: float, moisture_frac: float) -> None:
-    st.markdown("##### 🔮 Prediksi Real-Time — ML vs Kalkulator Neraca Massa")
+    st.markdown("##### Prediksi Real-Time — ML vs Kalkulator Neraca Massa")
     _bounds_warning(comp, knobs)
 
     dry = wet_feed_t * (1.0 - moisture_frac)
@@ -198,8 +198,8 @@ def _prediction_comparison(comp: dict, knobs: dict,
         ("precip_yield_pct", "Yield Presipitasi", "{:.2f}%"),
     ]
     c_ml, c_gap, c_phys = st.columns([5, 1, 5])
-    c_ml.markdown("**🤖 Model ML (LightGBM surrogate)**")
-    c_phys.markdown("**🧮 Kalkulator Excel (neraca massa)**")
+    c_ml.markdown("**Model ML (LightGBM surrogate)**")
+    c_phys.markdown("**Kalkulator Excel (neraca massa)**")
     for key, label_, fmt in rows:
         mlv = ml.get(key)
         phv = phys.get(key)
@@ -214,7 +214,7 @@ def _prediction_comparison(comp: dict, knobs: dict,
             c_gap.markdown("")
         c_phys.metric(label_, fmt.format(phv) if phv is not None else "n/a")
 
-    with st.expander("🔬 Rincian neraca massa (fisika/Excel) — semua besaran antara"):
+    with st.expander("Rincian neraca massa (fisika/Excel) — semua besaran antara"):
         detail = {
             "Efisiensi Digesti (%)": phys["digestion_eff_pct"],
             "Causticity liquor aktual": phys["causticity"],
@@ -246,7 +246,7 @@ def _sweep_knob(comp: dict, knobs: dict, sweep_key: str, target: str, n: int = 2
 
 
 def _sensitivity_section(comp: dict, knobs: dict) -> None:
-    st.markdown("##### 📐 Simulasi What-If Parameter — sensitivitas pada komposisi ini")
+    st.markdown("##### Simulasi What-If Parameter — sensitivitas pada komposisi ini")
     st.caption(
         "Tiap kurva: SATU parameter disapu sepanjang rentang amannya, parameter "
         "lain & komposisi bauksit ditahan pada nilai yang Anda atur di atas. "
@@ -299,14 +299,14 @@ def _sensitivity_section(comp: dict, knobs: dict) -> None:
     st.plotly_chart(tfig, width="stretch", key="pl_tornado")
     top = order[0]
     st.caption(
-        f"💡 Untuk komposisi bauksit yang Anda masukkan, **{schema.label(top)}** "
+        f"Untuk komposisi bauksit yang Anda masukkan, **{schema.label(top)}** "
         f"punya pengaruh terbesar terhadap {schema.label(target)} "
         f"(Δ{deltas[top]:+.2f} sepanjang rentang aman)."
     )
 
 
 def _retrain_expander() -> None:
-    with st.expander("🔁 Latih ulang model ML dari data terbaru"):
+    with st.expander(":material/autorenew: Latih ulang model ML dari data terbaru"):
         st.caption(
             "Melatih ulang ke-4 model LightGBM surrogate dari "
             "`data/raw/data.csv` (5-fold cross-validation, ±5-10 detik)."
@@ -332,7 +332,7 @@ def render(df: pd.DataFrame) -> None:
         "bebas (tidak terikat jam replay), lihat prediksi real-time, dan "
         "simulasikan pengaruh tiap parameter. Ini melengkapi tab "
         "*Digesti & Pra-desilikasi* yang terikat pada baris histori tertentu.",
-        icon="🧪",
+        icon=":material/science:",
     )
     comp, _ = _composition_inputs(df)
     st.divider()
