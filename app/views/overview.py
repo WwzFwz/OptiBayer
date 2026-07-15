@@ -390,6 +390,42 @@ def _material_flow_section(df: pd.DataFrame, row: pd.Series) -> None:
             ui.empty_state("Sankey NaOH", "kolom neraca natrium tidak tersedia")
     st.divider()
     _regret_handover_section(df, st.session_state.get("_seq_ref", df), int(row.name) if row.name is not None else 0)
+    st.divider()
+    _audit_trail_section()
+
+
+def _audit_trail_section() -> None:
+    """Audit trail keputusan advisory: log sesi + file persisten (lintas restart)."""
+    from pathlib import Path
+
+    st.subheader("Audit Trail Keputusan Advisory")
+    log_path = (Path(__file__).resolve().parents[2]
+                / "data" / "processed" / "advisory_log.csv")
+    shown = False
+    if log_path.exists():
+        try:
+            log_df = pd.read_csv(log_path).tail(50).iloc[::-1]
+            st.dataframe(log_df.rename(columns={
+                "waktu": "Waktu", "jam_sim": "Jam Sim",
+                "judul": "Advisory", "keputusan": "Keputusan",
+            }), width="stretch", hide_index=True,
+                height=min(280, 40 + 35 * len(log_df)))
+            st.caption(
+                f"Persisten (lintas restart): `{log_path.name}` — "
+                f"{len(pd.read_csv(log_path))} keputusan tercatat total."
+            )
+            shown = True
+        except Exception:
+            pass
+    if not shown:
+        sess = st.session_state.get("advisory_log", [])
+        if sess:
+            st.dataframe(pd.DataFrame(sess), width="stretch", hide_index=True)
+        else:
+            st.caption(
+                "Belum ada keputusan advisory. Klik Terima/Tolak pada kartu "
+                "advisory — setiap keputusan tercatat di sini + file CSV persisten."
+            )
 
 
 # --------------------------------------------------------------------------
