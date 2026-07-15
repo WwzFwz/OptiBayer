@@ -113,7 +113,10 @@ if not hasattr(ui, "apply"):
 
     importlib.reload(ui)
 
-ui.apply(ss.theme_mode)  # palet chart mengikuti mode SEBELUM view dirender
+ui.apply(ss.theme_mode)   # palet chart mengikuti mode SEBELUM view dirender
+ui.inject_css(ss.theme_mode)  # light mode penuh + gaya tombol (lihat ui.py)
+ss.setdefault("nav", ui.NAV_LABELS["overview"])
+ss.setdefault("onboard_done", False)
 
 # ---------- sidebar: kendali replay & prioritas ----------
 with st.sidebar:
@@ -147,6 +150,14 @@ with st.sidebar:
     speed = st.slider("Detik per jam simulasi", 1.0, 5.0, 2.0, 0.5)
     ss.hour = st.slider("Jam simulasi", 0, len(seq) - 1, ss.hour)
 
+    if st.button("Muat jam ini → Prediction Lab", icon=":material/biotech:",
+                 width="stretch",
+                 help="Salin komposisi & setpoint jam aktif ke Prediction Lab "
+                      "untuk dieksperimen bebas"):
+        prediction_lab._apply_row(seq.iloc[ss.hour])
+        ss["_pl_init"] = True
+        ui.goto("lab")
+
     st.divider()
     st.markdown("**Prioritas optimasi** (bobot Pareto)")
     w_rec = st.slider("Recovery", 0.0, 1.0, 0.5, 0.05)
@@ -174,6 +185,26 @@ st.markdown(
     f"Skenario: {ss.scenario}</span>",
     unsafe_allow_html=True,
 )
+
+# ---------- onboarding sekali-tampil ----------
+if not ss.onboard_done:
+    with st.container(border=True):
+        b1, b2, b3 = st.columns([5.5, 2.4, 1.1])
+        b1.markdown(
+            "**Baru di sini?** Alur demo terbaik: jalankan skenario "
+            "**Gangguan: Silika Spike** — perhatikan KPI memerah sekitar jam 24, "
+            "kartu advisory muncul dengan rekomendasi setpoint + dampak angkanya."
+        )
+        if b2.button("Mulai demo Silika Spike", type="primary",
+                     icon=":material/play_arrow:", width="stretch"):
+            ss.scenario = replay.SCENARIOS[1]
+            ss.hour = 20
+            ss.playing = True
+            ss.onboard_done = True
+            st.rerun()
+        if b3.button("Tutup", icon=":material/close:", width="stretch"):
+            ss.onboard_done = True
+            st.rerun()
 
 # ---------- KPI row (stat tiles, doc 10) ----------
 hist = seq.iloc[: ss.hour + 1]
@@ -213,38 +244,37 @@ if providers.provider_name() != "template":
             st.markdown(text)
             st.caption(f"backend: {backend}")
 
-# ---------- tabs = stasiun (doc 10) ----------
-tabs = st.tabs([
-    ":material/monitoring: Overview",
-    ":material/account_tree: Diagram Proses",
-    ":material/local_fire_department: Digesti",
-    ":material/science: Liquor Loop",
-    ":material/ac_unit: Presipitasi",
-    ":material/recycling: Red Mud & CCUS",
-    ":material/biotech: Prediction Lab",
-])
-with tabs[0]:
+# ---------- navigasi = stasiun (doc 10) ----------
+# segmented control ber-state (bukan st.tabs) supaya tombol lain bisa
+# melompat antar halaman (ui.goto — mis. kartu advisory -> peta operasi).
+_nav_options = list(ui.NAV_LABELS.values())
+nav_sel = st.segmented_control(
+    "Navigasi", _nav_options, key="nav", label_visibility="collapsed",
+)
+page = nav_sel or ui.NAV_LABELS["overview"]
+
+if page == ui.NAV_LABELS["overview"]:
     overview.render(df, seq, ss.hour)
-with tabs[1]:
+elif page == ui.NAV_LABELS["pfd"]:
     pfd.render(row, ctx)
-with tabs[2]:
+elif page == ui.NAV_LABELS["digestion"]:
     if caps["surrogate"]:
         digestion.render(row, ctx)
     else:
         ui.empty_state("Peta operasi", "model surrogate belum terlatih")
-with tabs[3]:
+elif page == ui.NAV_LABELS["liquor"]:
     if caps["physics_na_balance"]:
         liquor.render(row, ctx)
     else:
         ui.empty_state("Neraca Na", "kolom neraca natrium tidak tersedia di data")
-with tabs[4]:
+elif page == ui.NAV_LABELS["precip"]:
     precip.render(row, ctx)
-with tabs[5]:
+elif page == ui.NAV_LABELS["redmud"]:
     if caps["sankey_al"]:
         redmud.render(row, ctx)
     else:
         ui.empty_state("Sankey Al", "kolom neraca aluminium tidak tersedia")
-with tabs[6]:
+elif page == ui.NAV_LABELS["lab"]:
     if caps["surrogate"]:
         prediction_lab.render(df)
     else:

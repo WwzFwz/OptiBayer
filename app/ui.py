@@ -56,6 +56,68 @@ SEV_ICON = {"critical": "🔴", "serious": "🟠", "warning": "🟡", "info": "�
 
 apply("dark")  # default; main.py menimpa sesuai toggle
 
+# label navigasi utama — dipakai main.py (render) & kartu advisory (lompat tab)
+NAV_LABELS = {
+    "overview": ":material/monitoring: Overview",
+    "pfd": ":material/account_tree: Diagram Proses",
+    "digestion": ":material/local_fire_department: Digesti",
+    "liquor": ":material/science: Liquor Loop",
+    "precip": ":material/ac_unit: Presipitasi",
+    "redmud": ":material/recycling: Red Mud & CCUS",
+    "lab": ":material/biotech: Prediction Lab",
+}
+
+
+def goto(page: str) -> None:
+    """Lompat programatik ke halaman navigasi (dipanggil tombol jembatan)."""
+    st.session_state["nav"] = NAV_LABELS[page]
+    st.rerun()
+
+
+def inject_css(mode: str) -> None:
+    """CSS global: tombol lebih jelas + light mode penuh.
+
+    Tema inti Streamlit tidak punya API resmi utk diganti saat runtime,
+    jadi light mode ditegakkan lewat CSS di sini (chart sudah ikut via apply()).
+    Konvensi tombol: primary = aksi positif/utama -> HIJAU status.
+    """
+    base = """
+    <style>
+    /* tombol: lebih besar & tegas */
+    .stButton button, [data-testid="stSegmentedControl"] button {
+        font-size: 1rem; border-radius: 8px;
+    }
+    .stButton button { padding: 0.55rem 1.1rem; }
+    .stButton button p { font-size: 1rem; }
+    /* primary = aksi positif (Terima, Play, dsb) -> hijau status */
+    .stButton button[kind="primary"] {
+        background-color: #0ca30c; border: 1px solid #0ca30c; color: #ffffff;
+    }
+    .stButton button[kind="primary"]:hover {
+        background-color: #0b8f0b; border-color: #0b8f0b; color: #ffffff;
+    }
+    </style>
+    """
+    light = """
+    <style>
+    .stApp, [data-testid="stAppViewContainer"] {
+        background-color: #f9f9f7; color: #0b0b0b;
+    }
+    [data-testid="stHeader"] { background: rgba(249,249,247,0.85); }
+    [data-testid="stSidebar"] { background-color: #fcfcfb; }
+    [data-testid="stSidebar"] * { color: #0b0b0b; }
+    h1, h2, h3, h4, h5, h6, p, li, label, .stMarkdown,
+    [data-testid="stMetricValue"], [data-testid="stMetricLabel"],
+    [data-testid="stWidgetLabel"] p { color: #0b0b0b; }
+    [data-testid="stCaptionContainer"], .stCaption, small { color: #52514e; }
+    [data-testid="stExpander"] details, div[data-testid="stExpander"] {
+        background-color: #fcfcfb; border-color: #e1e0d9;
+    }
+    [data-testid="stVerticalBlockBorderWrapper"] { border-color: #e1e0d9; }
+    </style>
+    """
+    st.markdown(base + (light if mode == "light" else ""), unsafe_allow_html=True)
+
 
 def base_layout(fig: go.Figure, height: int = 300, title: str | None = None) -> go.Figure:
     fig.update_layout(
@@ -127,17 +189,41 @@ def advisory_card(card: dict, key: str):
             unsafe_allow_html=True,
         )
         if card["severity"] != "info":
-            c1, c2, _ = st.columns([1, 1, 4])
-            if c1.button("✔ Terima", key=f"acc_{key}"):
-                st.session_state.advisory_log.append(
-                    {"hour": st.session_state.hour, "title": card["title"], "decision": "terima"}
+            hour = st.session_state.get("hour", 0)
+            decided = next(
+                (l for l in st.session_state.advisory_log
+                 if l["hour"] == hour and l["title"] == card["title"]), None,
+            )
+            if decided:
+                # feedback tegas: keputusan terkunci, tercatat di audit trail
+                badge = ("✓ DITERIMA" if decided["decision"] == "terima"
+                         else "✗ DITOLAK")
+                bcol = (STATUS["good"] if decided["decision"] == "terima"
+                        else STATUS["critical"])
+                st.markdown(
+                    f"<span style='color:{bcol};font-weight:700'>{badge}</span> "
+                    f"<span style='color:{MUTED}'>— tercatat di audit trail "
+                    f"(jam {hour:02d}:00)</span>",
+                    unsafe_allow_html=True,
                 )
-                st.toast("Advisory diterima — dicatat di audit trail")
-            if c2.button("✘ Tolak", key=f"rej_{key}"):
-                st.session_state.advisory_log.append(
-                    {"hour": st.session_state.hour, "title": card["title"], "decision": "tolak"}
-                )
-                st.toast("Advisory ditolak — dicatat di audit trail")
+            else:
+                c1, c2, c3, _ = st.columns([1.2, 1.2, 1.6, 2])
+                if c1.button("Terima", key=f"acc_{key}", type="primary",
+                             icon=":material/check_circle:", width="stretch"):
+                    st.session_state.advisory_log.append(
+                        {"hour": hour, "title": card["title"], "decision": "terima"}
+                    )
+                    st.rerun()
+                if c2.button("Tolak", key=f"rej_{key}",
+                             icon=":material/cancel:", width="stretch"):
+                    st.session_state.advisory_log.append(
+                        {"hour": hour, "title": card["title"], "decision": "tolak"}
+                    )
+                    st.rerun()
+                if c3.button("Lihat peta operasi", key=f"map_{key}",
+                             icon=":material/map:", width="stretch",
+                             help="Lompat ke tab Digesti — rekomendasi ditandai ★ di peta"):
+                    goto("digestion")
 
 
 def empty_state(feature: str, reason: str):
