@@ -28,7 +28,7 @@ def render(row: pd.Series, ctx: dict):
             source=[0, 1, 2, 2, 2],
             target=[2, 2, 3, 4, 1],
             value=[al_feed, al_recycled, al_product, al_lost, al_recycled],
-            color="rgba(255,255,255,0.14)",
+            color=ui.LINK_FADE,
         ),
     ))
     st.plotly_chart(ui.base_layout(fig, height=340), width="stretch")

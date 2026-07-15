@@ -79,11 +79,48 @@ ss.setdefault("hour", 8)
 ss.setdefault("playing", False)
 ss.setdefault("advisory_log", [])
 ss.setdefault("scenario", replay.SCENARIOS[0])
+ss.setdefault("theme_mode", "dark")
+
+
+def _set_core_theme(mode: str) -> None:
+    """Ganti tema inti Streamlit saat runtime.
+
+    Tidak ada API resmi utk ini; set opsi config lalu rerun — bekerja pada
+    versi Streamlit saat ini. Kalau suatu saat gagal, chart TETAP mengikuti
+    mode (ui.apply) dan tema inti bisa diganti manual via ☰ > Settings > Theme.
+    """
+    try:
+        from streamlit import config as _cfg
+        if mode == "light":
+            vals = {"theme.base": "light", "theme.backgroundColor": "#f9f9f7",
+                    "theme.secondaryBackgroundColor": "#fcfcfb",
+                    "theme.textColor": "#0b0b0b", "theme.primaryColor": "#2a78d6"}
+        else:
+            vals = {"theme.base": "dark", "theme.backgroundColor": "#0d0d0d",
+                    "theme.secondaryBackgroundColor": "#1a1a19",
+                    "theme.textColor": "#ffffff", "theme.primaryColor": "#3987e5"}
+        for k, v in vals.items():
+            _cfg.set_option(k, v)
+    except Exception:
+        pass
+
+
+ui.apply(ss.theme_mode)  # palet chart mengikuti mode SEBELUM view dirender
 
 # ---------- sidebar: kendali replay & prioritas ----------
 with st.sidebar:
     st.markdown("## AI RED MUD")
     st.caption("Bayer Process Advisor — demo replay (streaming-ready, doc 07)")
+
+    light_on = st.toggle(
+        "Mode terang", value=(ss.theme_mode == "light"),
+        help="Tema putih untuk ruangan terang; chart & diagram ikut menyesuaikan",
+    )
+    _new_mode = "light" if light_on else "dark"
+    if _new_mode != ss.theme_mode:
+        ss.theme_mode = _new_mode
+        _set_core_theme(_new_mode)
+        st.rerun()
 
     scenario = st.selectbox("Skenario replay", replay.SCENARIOS,
                             index=replay.SCENARIOS.index(ss.scenario))

@@ -9,15 +9,42 @@ from __future__ import annotations
 import plotly.graph_objects as go
 import streamlit as st
 
-# --- palet (dark mode, doc 10 §2) ---
-SURFACE = "#1a1a19"
-PAGE = "#0d0d0d"
-INK = "#ffffff"
-INK2 = "#c3c2b7"
-MUTED = "#898781"
-GRID = "#2c2c2a"
+# --- palet dua-mode (doc 10 §2 + palet light dari referensi dataviz) ---
+# Nilai module-level di bawah DIGANTI oleh apply(mode) — view membacanya saat
+# render (ui.SERIES[...]), jadi toggle tema cukup memanggil apply() + rerun.
+_DARK = dict(
+    SURFACE="#1a1a19", PAGE="#0d0d0d", INK="#ffffff", INK2="#c3c2b7",
+    MUTED="#898781", GRID="#2c2c2a",
+    SERIES=["#3987e5", "#199e70", "#c98500", "#008300", "#9085e9"],
+    SEQ_BLUE=[[0.0, "#cde2fb"], [0.25, "#86b6ef"], [0.5, "#3987e5"],
+              [0.75, "#1c5cab"], [1.0, "#0d366b"]],
+    LINK_FADE="rgba(255,255,255,0.14)",   # link Sankey
+    DIV_MID="#2c2c2a",                    # titik tengah skala diverging
+    READ_BG="#0c0c0b", READ_BORDER="#3a3a38", VALUE_COLOR="#ffd84d",
+    UNIT_FILL="#262624", LABEL_BG="rgba(13,13,13,0.7)",
+)
+_LIGHT = dict(
+    SURFACE="#fcfcfb", PAGE="#f9f9f7", INK="#0b0b0b", INK2="#52514e",
+    MUTED="#898781", GRID="#e1e0d9",
+    SERIES=["#2a78d6", "#1baf7a", "#eda100", "#008300", "#4a3aa7"],
+    SEQ_BLUE=[[0.0, "#cde2fb"], [0.25, "#86b6ef"], [0.5, "#2a78d6"],
+              [0.75, "#1c5cab"], [1.0, "#0d366b"]],
+    LINK_FADE="rgba(11,11,11,0.12)",
+    DIV_MID="#f0efec",
+    READ_BG="#f0efec", READ_BORDER="#c3c2b7", VALUE_COLOR="#8a5a00",
+    UNIT_FILL="#f3f2ee", LABEL_BG="rgba(252,252,251,0.8)",
+)
+MODE = "dark"
 
-SERIES = ["#3987e5", "#199e70", "#c98500", "#008300", "#9085e9"]  # urutan TETAP
+
+def apply(mode: str) -> None:
+    """Tukar seluruh palet chart ke 'dark'/'light' (dipanggil main.py per run)."""
+    global MODE
+    MODE = "light" if mode == "light" else "dark"
+    globals().update(_LIGHT if MODE == "light" else _DARK)
+
+
+# warna status: SAMA di kedua mode (dipasangkan ikon+label, doc 10)
 STATUS = {
     "good": "#0ca30c",
     "warning": "#fab219",
@@ -25,12 +52,9 @@ STATUS = {
     "critical": "#d03b3b",
     "info": "#3987e5",
 }
-SEQ_BLUE = [
-    [0.0, "#cde2fb"], [0.25, "#86b6ef"], [0.5, "#3987e5"],
-    [0.75, "#1c5cab"], [1.0, "#0d366b"],
-]
-
 SEV_ICON = {"critical": "🔴", "serious": "🟠", "warning": "🟡", "info": "🔵"}
+
+apply("dark")  # default; main.py menimpa sesuai toggle
 
 
 def base_layout(fig: go.Figure, height: int = 300, title: str | None = None) -> go.Figure:

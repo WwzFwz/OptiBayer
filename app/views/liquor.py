@@ -49,7 +49,7 @@ def render(row: pd.Series, ctx: dict):
         node=dict(label=labels, color=node_colors, pad=24, thickness=16,
                   line=dict(color=ui.GRID, width=1)),
         link=dict(source=src, target=dst, value=val,
-                  color="rgba(255,255,255,0.14)"),
+                  color=ui.LINK_FADE),
     ))
     st.plotly_chart(ui.base_layout(fig, height=380), width="stretch")
 

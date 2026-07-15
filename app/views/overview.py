@@ -44,10 +44,12 @@ TREND_TITLES = {
     "reactive_sio2_pct": "Silika Reaktif Masuk (%)",
 }
 
-DIVERGING = [
-    [0.0, "#d03b3b"], [0.25, "#c98c7a"], [0.5, "#2c2c2a"],
-    [0.75, "#5a9fd6"], [1.0, "#3987e5"],
-]
+def _diverging() -> list:
+    """Skala diverging merah↔biru; titik tengah netral ikut mode tema."""
+    return [
+        [0.0, "#d03b3b"], [0.25, "#c98c7a"], [0.5, ui.DIV_MID],
+        [0.75, "#5a9fd6"], [1.0, ui.SERIES[0]],
+    ]
 
 
 # --------------------------------------------------------------------------
@@ -145,7 +147,7 @@ def _correlation_heatmap(df: pd.DataFrame, target: str) -> go.Figure:
     fig = go.Figure(go.Bar(
         x=vals, y=labels, orientation="h",
         marker=dict(
-            color=vals, colorscale=DIVERGING, cmin=-1, cmax=1,
+            color=vals, colorscale=_diverging(), cmin=-1, cmax=1,
             line=dict(width=0),
         ),
         hovertemplate="%{y}: r=%{x:.3f}<extra></extra>",

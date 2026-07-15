@@ -21,21 +21,20 @@ import streamlit as st
 
 from app import ui
 
-# warna pipa per jenis aliran (identitas konsisten di seluruh diagram)
-PIPE = {
-    "liquor": ui.SERIES[0],       # Bayer liquor / kaustik
-    "slurry": "#b08968",          # slurry bauksit
-    "redmud": ui.STATUS["serious"],
-    "product": ui.STATUS["good"],
-    "water": ui.SERIES[1],
-    "recycle": ui.SERIES[1],
-}
-READ_BG = "#0c0c0b"
-READ_BORDER = "#3a3a38"
-VALUE_COLOR = "#ffd84d"           # readout "LCD" kuning ala panel HMI
-
 _UNIT_W, _UNIT_H = 1.9, 0.9
 _TERM_W, _TERM_H = 1.5, 0.6
+
+
+def _pipe_color(kind: str) -> str:
+    """Warna pipa per jenis aliran — dibaca saat render agar ikut mode tema."""
+    return {
+        "liquor": ui.SERIES[0],       # Bayer liquor / kaustik
+        "slurry": "#b08968",          # slurry bauksit
+        "redmud": ui.STATUS["serious"],
+        "product": ui.STATUS["good"],
+        "water": ui.SERIES[1],
+        "recycle": ui.SERIES[1],
+    }[kind]
 
 
 def _lamp(fig, x, y, status: str):
@@ -52,7 +51,7 @@ def _unit(fig, x, y, label, *, status="good", hover=""):
         type="rect", x0=x - _UNIT_W / 2, x1=x + _UNIT_W / 2,
         y0=y - _UNIT_H / 2, y1=y + _UNIT_H / 2,
         line=dict(color=ui.STATUS[status], width=2.5),
-        fillcolor="#262624", layer="below",
+        fillcolor=ui.UNIT_FILL, layer="below",
     )
     # "level" dekoratif ala tangki
     fig.add_shape(
@@ -89,7 +88,7 @@ def _terminal(fig, x, y, label, *, hover=""):
 
 def _pipe(fig, pts: list[tuple], kind: str, *, dash: str | None = None):
     """Pipa ortogonal: polyline tebal + arrowhead di ujung."""
-    color = PIPE[kind]
+    color = _pipe_color(kind)
     for (x0, y0), (x1, y1) in zip(pts[:-1], pts[1:]):
         fig.add_shape(type="line", x0=x0, y0=y0, x1=x1, y1=y1,
                       line=dict(color=color, width=5, dash=dash), layer="below")
@@ -99,13 +98,14 @@ def _pipe(fig, pts: list[tuple], kind: str, *, dash: str | None = None):
                        arrowwidth=4, arrowcolor=color, text="")
 
 
-def _readout(fig, x, y, label, value, *, color=VALUE_COLOR):
+def _readout(fig, x, y, label, value, *, color=None):
     """Kotak readout digital ala HMI: label kecil + angka terang."""
+    color = color or ui.VALUE_COLOR
     w, h = 1.45, 0.52
     fig.add_shape(type="rect", x0=x - w / 2, x1=x + w / 2,
                   y0=y - h / 2, y1=y + h / 2,
-                  line=dict(color=READ_BORDER, width=1),
-                  fillcolor=READ_BG)
+                  line=dict(color=ui.READ_BORDER, width=1),
+                  fillcolor=ui.READ_BG)
     fig.add_annotation(x=x, y=y + h / 2 + 0.14, text=label, showarrow=False,
                        font=dict(color=ui.MUTED, size=9))
     fig.add_annotation(x=x, y=y, text=f"<b>{value}</b>", showarrow=False,
@@ -193,15 +193,15 @@ def render(row: pd.Series, ctx: dict):
                 f"<br>NaOH loss fisik {nb['physical_loss_t']:.2f} t")
 
     # ================= READOUT DIGITAL =================
-    sio2_color = ui.STATUS[feed_status] if feed_status != "good" else VALUE_COLOR
+    sio2_color = ui.STATUS[feed_status] if feed_status != "good" else ui.VALUE_COLOR
     _readout(fig, 2.5, 9.35, "SiO₂ reaktif", f"{sio2:.1f} %", color=sio2_color)
     _readout(fig, 4.9, 6.55, "NaOH make-up", f"{nb['makeup_t']:.2f} t")
     _readout(fig, 7.35, 9.35, "Digestion eff", f"{dig_eff:.1f} %",
-             color=ui.STATUS[dig_status] if dig_status != "good" else VALUE_COLOR)
+             color=ui.STATUS[dig_status] if dig_status != "good" else ui.VALUE_COLOR)
     _readout(fig, 9.75, 7.15, "Bayer liquor", "overflow", color=ui.SERIES[0])
     _readout(fig, 12.6, 8.35, "Underflow", "red mud", color=ui.STATUS["serious"])
     _readout(fig, 7.55, 4.65, "Precip yield", f"{yield_pct:.1f} %",
-             color=ui.STATUS[prec_status] if prec_status != "good" else VALUE_COLOR)
+             color=ui.STATUS[prec_status] if prec_status != "good" else ui.VALUE_COLOR)
     _readout(fig, 9.85, 3.6, "Al(OH)₃", f"{row['hydrate_t']:.0f} t",
              color=ui.STATUS["good"])
     _readout(fig, 12.65, 5.6, "Red mud", f"{row['red_mud_t']:.1f} t",
@@ -218,7 +218,7 @@ def render(row: pd.Series, ctx: dict):
     for i, (name, kind) in enumerate(legend_items):
         x0 = 0.5 + i * 2.75
         fig.add_shape(type="line", x0=x0, y0=2.35, x1=x0 + 0.4, y1=2.35,
-                      line=dict(color=PIPE[kind], width=5))
+                      line=dict(color=_pipe_color(kind), width=5))
         fig.add_annotation(x=x0 + 0.52, y=2.35, text=name, showarrow=False,
                            xanchor="left", font=dict(color=ui.MUTED, size=10))
 
