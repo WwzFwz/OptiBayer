@@ -13,9 +13,10 @@ def main():
     row = df.iloc[0]
     comp = predict.composition_of(row)
 
-    # fisika
+    # fisika (skala-agnostik: v1 basis 100 t maupun v2 skala pabrik)
     c = carbonation.assess(row["red_mud_t"])
-    assert 0 < c.co2_sequestered_t < 5 and c.water_needed_t == 2 * row["red_mud_t"]
+    assert abs(c.co2_sequestered_t - 0.023 * row["red_mud_t"]) < 1e-9
+    assert c.water_needed_t == 2 * row["red_mud_t"]
     print(f"karbonasi: {row['red_mud_t']:.1f} t RM -> {c.co2_sequestered_t:.2f} t CO2, "
           f"nilai Rp{c.carbon_value_idr:,.0f}")
 
@@ -49,9 +50,14 @@ def main():
     assert rec_lo > rec_hi, "silika tinggi harus menurunkan recovery optimal"
     print(f"silika 2% -> rec optimal {rec_lo:.1f}% | silika 7% -> {rec_hi:.1f}%")
 
-    gs = goal_seek.cheapest_for_recovery(comp, target_recovery=88.0)
+    # goal-seek pada bauksit silika rendah (target harus feasible utk komposisinya)
+    comp_lo = predict.composition_of(
+        df[df["reactive_sio2_pct"] < 4.0].iloc[0]
+    )
+    gs = goal_seek.cheapest_for_recovery(comp_lo, target_recovery=88.0)
     assert gs and gs["prediction"]["recovery_pct"] >= 87.75
-    print(f"goal-seek rec>=88%: opex {gs['prediction']['total_opex']:.0f} "
+    print(f"goal-seek rec>=88% (silika rendah): opex "
+          f"{gs['prediction']['total_opex']:.0f} "
           f"(rec {gs['prediction']['recovery_pct']:.1f}%)")
 
     # regret meter pada 'shift' 8 baris

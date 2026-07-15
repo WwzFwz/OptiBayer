@@ -69,39 +69,7 @@ def render(row: pd.Series, ctx: dict):
     st.plotly_chart(ui.base_layout(fig, height=430), width="stretch")
 
     st.divider()
-    st.subheader("What-if: geser setpoint & komposisi, lihat prediksi")
-    
-    with st.expander("🔬 Parameter & Komposisi Bauksit Mentah"):
-        st.caption("Ubah laju umpan (feed rate) dan komposisi untuk melihat simulasi berskala pabrik.")
-        
-        c_op = st.columns(2)
-        feed_rate = c_op[0].number_input("Wet Feed Rate (ton/jam)", min_value=150.0, max_value=3000.0, value=1500.0, step=50.0)
-        moisture = c_op[1].number_input("Free Moisture (%)", min_value=0.0, max_value=30.0, value=10.0, step=1.0)
-        
-        c_comp1 = st.columns(4)
-        what_if_comp = comp.copy()
-        what_if_comp["al2o3_pct"] = c_comp1[0].number_input("Al₂O₃ (%)", min_value=20.0, max_value=80.0, value=float(comp["al2o3_pct"]), step=0.5)
-        what_if_comp["reactive_sio2_pct"] = c_comp1[1].number_input("Silika Reaktif (%)", min_value=0.0, max_value=20.0, value=float(comp["reactive_sio2_pct"]), step=0.1)
-        what_if_comp["fe2o3_pct"] = c_comp1[2].number_input("Fe₂O₃ (%)", min_value=0.0, max_value=40.0, value=float(comp.get("fe2o3_pct", 10.0)), step=0.5)
-        what_if_comp["tio2_pct"] = c_comp1[3].number_input("TiO₂ (%)", min_value=0.0, max_value=10.0, value=float(comp.get("tio2_pct", 1.0)), step=0.1)
-        
-        c_comp2 = st.columns(5)
-        what_if_comp["cao_pct"] = c_comp2[0].number_input("CaO (%)", min_value=0.0, max_value=5.0, value=float(comp.get("cao_pct", 0.5)), step=0.1)
-        what_if_comp["mgo_pct"] = c_comp2[1].number_input("MgO (%)", min_value=0.0, max_value=5.0, value=float(comp.get("mgo_pct", 0.5)), step=0.1)
-        what_if_comp["na2o_pct"] = c_comp2[2].number_input("Na₂O (%)", min_value=0.0, max_value=5.0, value=float(comp.get("na2o_pct", 0.05)), step=0.05)
-        what_if_comp["k2o_pct"] = c_comp2[3].number_input("K₂O (%)", min_value=0.0, max_value=5.0, value=float(comp.get("k2o_pct", 0.2)), step=0.05)
-        what_if_comp["cr2o3_pct"] = c_comp2[4].number_input("Cr₂O₃ (%)", min_value=0.0, max_value=2.0, value=float(comp.get("cr2o3_pct", 0.05)), step=0.05)
-        
-        known_comp_keys = ["al2o3_pct", "reactive_sio2_pct", "fe2o3_pct", "tio2_pct", "cao_pct", "mgo_pct", "na2o_pct", "k2o_pct", "cr2o3_pct"]
-        total_known = sum(what_if_comp[k] for k in known_comp_keys)
-        sisa = 100.0 - total_known
-        if sisa < 0:
-            st.error(f"Total komposisi melebihi 100% (Berlebih {-sisa:.1f}%)")
-            what_if_comp["others_pct"] = 0.0
-        else:
-            st.info(f"Sisa komposisi inert lainnya (Others): {sisa:.1f}%")
-            what_if_comp["others_pct"] = sisa
-
+    st.subheader("What-if: geser setpoint, lihat prediksi")
     cols = st.columns(5)
     what_if = {}
     for col, k in zip(cols, schema.KNOBS):
@@ -110,28 +78,16 @@ def render(row: pd.Series, ctx: dict):
             schema.label(k), float(lo), float(hi), float(knobs_now[k]),
             key=f"whatif_{k}",
         )
-        
-    # Scale mass balance features linearly based on Feed Rate
-    # The ML model targets were trained on a fixed dry feed rate of ~150 t/h
-    dry_feed_rate = feed_rate * (1 - (moisture / 100.0))
-    scale_factor = dry_feed_rate / 150.0
-
-    p_now = ctx["predicted_now"].copy()
-    p_new = predict.predict_one(what_if_comp, what_if)
-    
-    for k in ["total_opex", "red_mud_t"]:
-        p_now[k] *= scale_factor
-        p_new[k] *= scale_factor
-
+    p_now = ctx["predicted_now"]
+    p_new = predict.predict_one(comp, what_if)
     m = st.columns(4)
     m[0].metric("Recovery", f"{p_new['recovery_pct']:.1f}%",
                 f"{p_new['recovery_pct'] - p_now['recovery_pct']:+.1f}%")
     m[1].metric("OPEX/jam", f"{p_new['total_opex']:,.0f}",
                 f"{p_new['total_opex'] - p_now['total_opex']:+,.0f}",
                 delta_color="inverse")
-    m[2].metric("Red Mud", f"{p_new['red_mud_t']:,.1f} t",
-                f"{p_new['red_mud_t'] - p_now['red_mud_t']:+,.1f} t",
+    m[2].metric("Red Mud", f"{p_new['red_mud_t']:.1f} t",
+                f"{p_new['red_mud_t'] - p_now['red_mud_t']:+.1f} t",
                 delta_color="inverse")
     m[3].metric("Yield Presipitasi", f"{p_new.get('precip_yield_pct', 0):.1f}%",
                 f"{p_new.get('precip_yield_pct', 0) - p_now.get('precip_yield_pct', 0):+.1f}%")
-

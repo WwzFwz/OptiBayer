@@ -18,8 +18,13 @@ MW_NAOH, MW_NA2CO3, MW_CAO = 40.0, 106.0, 56.0
 
 
 def breakdown(row: pd.Series) -> dict:
-    """Dekomposisi kebocoran NaOH satu baris operasi (ton, basis 100 t bauksit)."""
-    sio2_t = float(row["reactive_sio2_pct"])          # % pada basis 100 t ≈ ton
+    """Dekomposisi kebocoran NaOH satu baris operasi (ton/jam).
+
+    Basis feed diambil dari kolom `feed_rate_t` (dry, t/jam) bila ada —
+    data v2 = 800 t/jam; fallback 100 t untuk data v1 (basis 100 t bauksit).
+    """
+    basis_t = float(row.get("feed_rate_t", 100.0) or 100.0)
+    sio2_t = float(row["reactive_sio2_pct"]) / 100.0 * basis_t
     predesil_eff = float(row.get("predesil_eff", 0.8))
     carb_frac = float(row.get("naoh_carbonation_frac", 0.1))
     conv_eff = float(row.get("na2co3_conv_eff", 0.9))

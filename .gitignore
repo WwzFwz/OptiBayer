@@ -29,6 +29,10 @@ models/*.ubj
 .DS_Store
 Thumbs.db
 
+# Arsip kiriman tim di root (salinan resmi kalkulator ada di data/calculator/)
+/*.zip
+/*.xlsm
+
 # Env & secrets
 .env
 *.local
