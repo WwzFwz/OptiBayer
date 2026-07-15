@@ -121,6 +121,61 @@ def advise(ctx: dict) -> tuple[str, str]:
     return template.narrative(ctx), "template"
 
 
+_EXPLAIN_SYSTEM = (
+    "Anda process engineer senior pabrik alumina yang mendampingi Control Room "
+    "Operator. Diberikan konteks JSON berisi angka-angka SEBUAH CHART, jawab "
+    "dalam Bahasa Indonesia, maksimal 4 kalimat, dengan MENUNJUK angka dari "
+    "konteks (mis. 'DSP memakan 34% make-up'). Fokus: apa artinya untuk "
+    "operator dan tindakan apa yang relevan. DILARANG memakai angka yang tidak "
+    "ada di konteks. Kalau ada pertanyaan user, jawab pertanyaan itu dulu."
+)
+
+
+def _template_explain(context: dict) -> str:
+    """Fallback deterministik: ringkasan angka konteks (tanpa LLM)."""
+    def _flat(d: dict, prefix: str = "") -> list[tuple[str, object]]:
+        items: list[tuple[str, object]] = []
+        for k, v in d.items():
+            if isinstance(v, dict):
+                items += _flat(v, f"{prefix}{k}.")
+            elif isinstance(v, (int, float, str)):
+                items.append((f"{prefix}{k}", v))
+        return items
+
+    lines = ["**Ringkasan angka chart ini:**"]
+    for k, v in _flat(context)[:10]:
+        vv = f"{v:,.2f}" if isinstance(v, float) else str(v)
+        lines.append(f"- {k}: {vv}")
+    lines.append("")
+    lines.append(
+        "_Analisis naratif butuh LLM — aktifkan gratis via `.env` "
+        "(`LLM_PROVIDER=groq`, lihat docs/13 §5)._"
+    )
+    return "\n".join(lines)
+
+
+def explain_chart(chart_title: str, context: dict,
+                  question: str = "") -> tuple[str, str]:
+    """Analisis AI untuk satu chart -> (markdown, backend). Selalu berhasil.
+
+    Konteks = HANYA angka milik chart tsb (grounding ketat per-chart);
+    pertanyaan bebas user opsional.
+    """
+    name = provider_name()
+    fn = _BACKENDS.get(name)
+    if fn is not None:
+        prompt = f"Chart: {chart_title}\nKonteks angka:\n" + json.dumps(
+            context, ensure_ascii=False, default=str
+        )
+        if question.strip():
+            prompt += f"\n\nPertanyaan operator: {question.strip()}"
+        try:
+            return fn(prompt, _EXPLAIN_SYSTEM), name
+        except Exception:
+            pass
+    return _template_explain(context), "template"
+
+
 def handover_report(shift_summary: dict) -> tuple[str, str]:
     """Laporan serah terima shift (I4, doc 12)."""
     name = provider_name()

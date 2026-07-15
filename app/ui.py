@@ -259,5 +259,35 @@ def advisory_card(card: dict, key: str):
                     goto("digestion")
 
 
+def explain_chart(chart_id: str, title: str, context: dict):
+    """Tombol 'Analisis AI' reusable di bawah sebuah chart.
+
+    Konteks = angka milik chart itu saja (grounding per-chart). Jawaban
+    di-cache di session per (chart, pertanyaan) supaya rerun tidak
+    memanggil ulang LLM.
+    """
+    from src.advisory import providers
+
+    with st.expander(f":material/auto_awesome: Analisis AI — {title}"):
+        q = st.text_input(
+            "Pertanyaan (opsional — kosongkan untuk penjelasan umum)",
+            key=f"exq_{chart_id}",
+            placeholder="mis. mana kebocoran terbesar & apa tindakannya?",
+        )
+        if st.button("Analisis", key=f"exb_{chart_id}",
+                     icon=":material/auto_awesome:"):
+            with st.spinner("Menganalisis angka chart..."):
+                ans, backend = providers.explain_chart(title, context, q)
+            st.session_state[f"exa_{chart_id}"] = (ans, backend, q)
+        cached = st.session_state.get(f"exa_{chart_id}")
+        if cached:
+            ans, backend, prev_q = cached
+            if prev_q:
+                st.caption(f"Pertanyaan: {prev_q}")
+            st.markdown(ans)
+            st.caption(f"backend: {backend} · jawaban dihitung dari angka "
+                       "chart ini saja (grounded)")
+
+
 def empty_state(feature: str, reason: str):
     st.info(f"Panel **{feature}** nonaktif — {reason}", icon="ℹ️")

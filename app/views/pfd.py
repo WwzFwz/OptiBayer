@@ -320,6 +320,25 @@ def render(row: pd.Series, ctx: dict, hist: pd.DataFrame | None = None):
     fig.update_layout(hovermode="closest", margin=dict(l=6, r=6, t=6, b=6))
     st.plotly_chart(fig, width="stretch")
 
+    _ex_ctx = {
+        "lapisan_aktif": layer,
+        "silika_reaktif_pct": sio2,
+        "digestion_eff_pct": dig_eff,
+        "precip_yield_pct": yield_pct,
+        "recovery_pct": float(row["recovery_pct"]),
+        "red_mud_t": float(row["red_mud_t"]),
+        "kebocoran_naoh": {
+            "makeup_t": nb["makeup_t"], "dsp_t": nb["dsp_loss_t"],
+            "soda_mati_net_t": nb["dead_soda_net_t"],
+            "fisik_t": nb["physical_loss_t"],
+        },
+        "karbonasi": {
+            "co2_t_per_jam": ctx["carbonation"]["co2_sequestered_t"],
+            "nilai_rp": ctx["carbonation"]["carbon_value_idr"],
+        },
+    }
+    ui.explain_chart("pfd", f"Diagram Proses (lapisan: {layer})", _ex_ctx)
+
     # ================= gauge ala panel SCADA =================
     g1, g2, g3 = st.columns(3)
 

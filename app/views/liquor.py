@@ -54,6 +54,17 @@ def render(row: pd.Series, ctx: dict):
     st.plotly_chart(ui.base_layout(fig, height=380), width="stretch")
 
     total_loss = nb["dsp_loss_t"] + nb["dead_soda_net_t"] + nb["physical_loss_t"]
+    ui.explain_chart("sankey_na", "Sankey Natrium (kebocoran NaOH)", {
+        "naoh_makeup_t_per_jam": nb["makeup_t"],
+        "naoh_recycle_t": nb["recycled_t"],
+        "loss_dsp_t": nb["dsp_loss_t"],
+        "loss_soda_mati_net_t": nb["dead_soda_net_t"],
+        "loss_fisik_red_mud_t": nb["physical_loss_t"],
+        "silika_reaktif_feed_pct": ctx["composition"]["reactive_sio2_pct"],
+        "status_dosis_cao": ca["status"],
+        "cao_stoikiometrik_t": ca["cao_recommended_t"],
+        "cao_aktual_t": ca["cao_actual_t"],
+    })
     c = st.columns(4)
     c[0].metric("Total kebocoran NaOH", f"{total_loss:.2f} t")
     c[1].metric("• Kimiawi (DSP)", f"{nb['dsp_loss_t']:.2f} t")
