@@ -1,4 +1,4 @@
-# ANTAM Hackathon — AI RED MUD (Bayer Process Advisor + CRO Console)
+# OptiBayer — Bayer Process Advisor + CRO Console (ANTAM Hackathon)
 
 **Solusi:** dashboard monitoring + advisory untuk Control Room Operator (CRO).
 Neuro-symbolic digital twin: surrogate ML (LightGBM) + fisika neraca massa +

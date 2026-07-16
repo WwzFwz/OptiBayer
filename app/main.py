@@ -1,4 +1,4 @@
-"""AI RED MUD — CRO Console (doc 10).
+"""OptiBayer — CRO Console (doc 10).
 
 Jalankan:  python -m streamlit run app/main.py
 (JANGAN menamai file ini app.py — akan shadow package `app` saat streamlit run.)
@@ -37,7 +37,7 @@ from src.data.adapters import load_clean
 from src.physics import carbonation
 
 st.set_page_config(
-    page_title="AI RED MUD — CRO Console", page_icon="🏭", layout="wide"
+    page_title="OptiBayer — CRO Console", page_icon="🏭", layout="wide"
 )
 
 # Artefak model di-gitignore (regenerable). Clone segar / deploy cloud:
@@ -120,7 +120,7 @@ ss.setdefault("onboard_done", False)
 
 # ---------- sidebar: kendali replay & prioritas ----------
 with st.sidebar:
-    st.markdown("## AI RED MUD")
+    st.markdown("## OptiBayer")
     st.caption("Bayer Process Advisor — demo replay (streaming-ready, doc 07)")
 
     st.markdown("**Skenario Demo**")
@@ -186,7 +186,7 @@ _day = ss.hour // 24 + 1
 _clock = ss.hour % 24
 _shift = _clock // 8 + 1
 st.markdown(
-    f"### AI RED MUD · Pabrik Alumina — Konsol CRO  "
+    f"### OptiBayer · Pabrik Alumina — Konsol CRO  "
     f"<span style='color:{ui.MUTED};font-size:0.7em'>Hari {_day} · "
     f"{_clock:02d}:00 · Shift {_shift} · Skenario: {ss.scenario}</span>",
     unsafe_allow_html=True,
