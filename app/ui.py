@@ -110,8 +110,18 @@ def inject_css(mode: str) -> None:
     [class*="st-key-kpi_"] { min-height: 8.2rem; text-align: center; }
     [class*="st-key-kpi_"] [data-testid="stMetricValue"] { justify-content: center; }
     [class*="st-key-kpi_"] [data-testid="stMetricValue"] > div { width: auto; }
-    [class*="st-key-kpi_"] [data-testid="stMetricDelta"] { justify-content: center; }
     [class*="st-key-kpi_"] [data-testid="stMetric"] { text-align: center; }
+    /* label judul (markdown) & chip delta ikut rata tengah */
+    [class*="st-key-kpi_"] [data-testid="stMarkdownContainer"],
+    [class*="st-key-kpi_"] [data-testid="stMarkdownContainer"] p {
+        text-align: center !important;
+    }
+    [class*="st-key-kpi_"] [data-testid="stMetricDelta"] {
+        justify-content: center;
+        width: fit-content;
+        margin-left: auto;
+        margin-right: auto;
+    }
     /* tombol Tolak (key rej_*) = destruktif -> merah outline, penuh saat hover */
     [class*="st-key-rej_"] button {
         border: 1px solid #d03b3b; color: #d03b3b;
