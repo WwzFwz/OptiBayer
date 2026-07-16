@@ -121,7 +121,10 @@ ss.setdefault("onboard_done", False)
 # ---------- sidebar: kendali replay & prioritas ----------
 with st.sidebar:
     st.markdown("## OptiBayer")
-    st.caption("Bayer Process Advisor — demo replay (streaming-ready, doc 07)")
+    st.caption(
+        "**Panel Kendali** — atur replay, prioritas, & tampilan di sini; "
+        "navigasi halaman ada di atas layar."
+    )
 
     st.markdown("**Skenario Demo**")
     scenario = st.selectbox("Skenario replay", replay.SCENARIOS,
@@ -181,14 +184,23 @@ row = seq.iloc[ss.hour]
 ctx = _context(ss.scenario, ss.hour, weights)
 
 # ---------- header ----------
+# halaman monitoring = terikat jam replay (KPI/advisory tampil);
+# Prediction Lab & Knowledge bebas replay -> tanpa KPI/jam (bukan konteksnya)
+_page_now = ss.get("nav") or ui.NAV_LABELS["overview"]
+_REPLAY_FREE = {ui.NAV_LABELS["lab"], ui.NAV_LABELS["knowledge"]}
+_is_monitoring = _page_now not in _REPLAY_FREE
+
 # jam simulasi kumulatif (0-95) -> tampilan manusiawi: Hari N · HH:00 · Shift
 _day = ss.hour // 24 + 1
 _clock = ss.hour % 24
 _shift = _clock // 8 + 1
+_subtitle = (
+    f"Hari {_day} · {_clock:02d}:00 · Shift {_shift} · Skenario: {ss.scenario}"
+    if _is_monitoring else "Halaman bebas replay"
+)
 st.markdown(
     f"### OptiBayer · Pabrik Alumina — Konsol CRO  "
-    f"<span style='color:{ui.MUTED};font-size:0.7em'>Hari {_day} · "
-    f"{_clock:02d}:00 · Shift {_shift} · Skenario: {ss.scenario}</span>",
+    f"<span style='color:{ui.MUTED};font-size:0.7em'>{_subtitle}</span>",
     unsafe_allow_html=True,
 )
 
@@ -223,24 +235,27 @@ def _delta(col: str, fmt: str = "{:+.1f}") -> str | None:
     return fmt.format(float(row[col]) - float(seq.iloc[ss.hour - 1][col]))
 
 
-k = st.columns(6)
-ui.kpi(k[0], "Recovery Al", f"{row['recovery_pct']:.1f}%",
-       ui.status_of(row["recovery_pct"], (85, 101), (82, 85)), _delta("recovery_pct"))
-ui.kpi(k[1], "OPEX / jam", f"{row['total_opex']:,.0f}",
-       ui.status_of(-row["total_opex"], (-25000, 0), (-40000, -25000)),
-       _delta("total_opex", "{:+,.0f}"), invert=True)
-ui.kpi(k[2], "Silika Reaktif", f"{row['reactive_sio2_pct']:.1f}%",
-       ui.status_of(-row["reactive_sio2_pct"], (-5.5, 0), (-6.3, -5.5)),
-       _delta("reactive_sio2_pct"), invert=True)
-ui.kpi(k[3], "Red Mud", f"{row['red_mud_t']:.1f} t",
-       ui.status_of(-row["red_mud_t"], (-500, 0), (-580, -500)),
-       _delta("red_mud_t"), invert=True)
-ui.kpi(k[4], "Potensi CO₂ capture", f"{co2_now:.2f} t", "good")
-ui.kpi(k[5], "Causticity", f"{row.get('causticity', 0.85):.2f}", "good")
+# KPI = tanda vital pabrik: SELALU tampil di halaman monitoring,
+# disembunyikan di halaman bebas replay (Lab/Knowledge)
+if _is_monitoring:
+    k = st.columns(6)
+    ui.kpi(k[0], "Recovery Al", f"{row['recovery_pct']:.1f}%",
+           ui.status_of(row["recovery_pct"], (85, 101), (82, 85)),
+           _delta("recovery_pct"))
+    ui.kpi(k[1], "OPEX / jam", f"{row['total_opex']:,.0f}",
+           ui.status_of(-row["total_opex"], (-25000, 0), (-40000, -25000)),
+           _delta("total_opex", "{:+,.0f}"), invert=True)
+    ui.kpi(k[2], "Silika Reaktif", f"{row['reactive_sio2_pct']:.1f}%",
+           ui.status_of(-row["reactive_sio2_pct"], (-5.5, 0), (-6.3, -5.5)),
+           _delta("reactive_sio2_pct"), invert=True)
+    ui.kpi(k[3], "Red Mud", f"{row['red_mud_t']:.1f} t",
+           ui.status_of(-row["red_mud_t"], (-500, 0), (-580, -500)),
+           _delta("red_mud_t"), invert=True)
+    ui.kpi(k[4], "Potensi CO₂ capture", f"{co2_now:.2f} t", "good")
+    ui.kpi(k[5], "Causticity", f"{row.get('causticity', 0.85):.2f}", "good")
 
 # ---------- advisory: penuh di Overview & Diagram, ringkas di stasiun, ----------
 # ---------- hilang di Lab/Knowledge (bebas replay -> advisory = noise) ----------
-_page_now = ss.get("nav") or ui.NAV_LABELS["overview"]
 _FULL_ADVISORY = {ui.NAV_LABELS["overview"], ui.NAV_LABELS["pfd"]}
 _COMPACT_ADVISORY = {ui.NAV_LABELS["digestion"], ui.NAV_LABELS["liquor"],
                      ui.NAV_LABELS["precip"], ui.NAV_LABELS["redmud"]}
