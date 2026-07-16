@@ -18,31 +18,43 @@ SILIKA_CRITICAL = 6.3
 
 
 def build(row: pd.Series, history: pd.DataFrame | None = None,
-          weights: tuple[float, float, float] = (0.5, 0.3, 0.2)) -> dict:
+          weights: tuple[float, float, float] = (0.5, 0.3, 0.2),
+          fast: bool = False) -> dict:
+    """Konteks advisory satu jam operasi.
+
+    fast=True (dipakai saat mode Play): LEWATI optimizer NSGA-II & SHAP —
+    tick jadi ~20x lebih ringan; rekomendasi = setpoint saat ini (delta 0)
+    dan kartu advisory menampilkan ajakan Pause utk analisis penuh. Analisis
+    dalam memang dilakukan saat berhenti — meniru ritme operator nyata.
+    """
     comp = predict.composition_of(row)
     knobs = predict.knobs_of(row)
     pred_now = predict.predict_one(comp, knobs)
 
-    pf = pareto.pareto(comp, gen=25, pop=40)          # cepat untuk per-tick
-    reco = pareto.pick(pf, *weights)
-    reco_knobs = {k: float(reco[k]) for k in schema.KNOBS}
-
-    model, _ = registry.load("surrogate_recovery_pct")
-    factors = explain.top_factors(
-        "surrogate_recovery_pct", model, predict.frame(comp, knobs)
-    )
+    if fast:
+        reco_knobs = dict(knobs)
+        reco = dict(pred_now)
+        factors: list = []
+    else:
+        pf = pareto.pareto(comp, gen=25, pop=40)      # cepat untuk per-tick
+        picked = pareto.pick(pf, *weights)
+        reco_knobs = {k: float(picked[k]) for k in schema.KNOBS}
+        reco = {t: float(picked[t]) for t in predict.TARGETS if t in picked}
+        model, _ = registry.load("surrogate_recovery_pct")
+        factors = explain.top_factors(
+            "surrogate_recovery_pct", model, predict.frame(comp, knobs)
+        )
 
     return {
+        "fast": fast,
         "composition": comp,
         "knobs_now": knobs,
         "actual": {t: float(row[t]) for t in predict.TARGETS if t in row},
         "predicted_now": pred_now,
         "recommended_knobs": reco_knobs,
-        "predicted_if_followed": {
-            t: float(reco[t]) for t in predict.TARGETS if t in reco
-        },
+        "predicted_if_followed": {t: float(v) for t, v in reco.items()},
         "delta_if_followed": {
-            t: float(reco[t]) - pred_now[t] for t in predict.TARGETS if t in reco
+            t: float(v) - pred_now[t] for t, v in reco.items()
         },
         "shap_factors": factors,
         "na_balance": na_balance.breakdown(row),

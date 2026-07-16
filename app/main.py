@@ -65,10 +65,10 @@ def _sequence(scenario: str):
     return replay.build_sequence(_load(), scenario)
 
 
-@st.cache_data(show_spinner="Menghitung advisory (surrogate + optimizer)...")
-def _context(scenario: str, hour: int, weights: tuple):
+@st.cache_data(show_spinner="Menghitung advisory...")
+def _context(scenario: str, hour: int, weights: tuple, fast: bool):
     row = _sequence(scenario).iloc[hour]
-    return adv_context.build(row, weights=weights)
+    return adv_context.build(row, weights=weights, fast=fast)
 
 
 df = _load()
@@ -185,7 +185,37 @@ with st.sidebar:
     )
 
 row = seq.iloc[ss.hour]
-ctx = _context(ss.scenario, ss.hour, weights)
+
+# ---------- annunciator: alarm lintas halaman + mode cepat saat Play ----------
+from src.advisory.context import SILIKA_CRITICAL, SILIKA_WARNING  # noqa: E402
+
+
+def _alarm_level(r) -> int:
+    """0 normal · 1 warning · 2 critical — murah, tanpa model/optimizer."""
+    if r["reactive_sio2_pct"] >= SILIKA_CRITICAL or r["recovery_pct"] < 82:
+        return 2
+    if r["reactive_sio2_pct"] >= SILIKA_WARNING or r["recovery_pct"] < 85:
+        return 1
+    return 0
+
+
+_level_now = _alarm_level(row)
+_level_prev = ss.get("_alarm_level", 0)
+if _level_now > _level_prev:
+    # transisi memburuk -> beri tahu operator DI HALAMAN MANA PUN
+    _icon = (":material/emergency_home:" if _level_now == 2
+             else ":material/warning:")
+    st.toast(
+        f"Jam {ss.hour:02d}:00 — silika {row['reactive_sio2_pct']:.1f}%, "
+        f"recovery {row['recovery_pct']:.1f}%. Advisory tersedia di Overview.",
+        icon=_icon,
+    )
+ss["_alarm_level"] = _level_now
+
+# Mode Play = jalur ringan (lewati NSGA-II & SHAP) supaya replay mulus —
+# KECUALI saat alarm critical: kondisi itu layak dihitung penuh walau Play.
+_fast_ctx = bool(ss.playing) and _level_now < 2
+ctx = _context(ss.scenario, ss.hour, weights, _fast_ctx)
 
 # ---------- header ----------
 # halaman monitoring = terikat jam replay (KPI/advisory tampil);

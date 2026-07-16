@@ -24,30 +24,49 @@ def cards(ctx: dict) -> list[dict]:
     d = ctx["delta_if_followed"]
 
     # 1) Gangguan silika / peluang setpoint
+    fast = bool(ctx.get("fast"))
     if ctx["silika_level"] in ("critical", "warning") or d.get("recovery_pct", 0) > 0.75:
         sev = "critical" if ctx["silika_level"] == "critical" else (
             "serious" if ctx["silika_level"] == "warning" else "warning"
         )
         sio2 = ctx["composition"]["reactive_sio2_pct"]
-        why = "; ".join(
-            f"{f['label']} = {f['value']:.1f} ({f['direction']} recovery)"
-            for f in ctx["shap_factors"]
+        title = (
+            f"Silika reaktif {sio2:.1f}% — di atas ambang"
+            if ctx["silika_level"] != "normal"
+            else "Setpoint saat ini belum optimal"
         )
-        out.append({
-            "severity": sev,
-            "title": (
-                f"Silika reaktif {sio2:.1f}% — di atas ambang"
-                if ctx["silika_level"] != "normal"
-                else "Setpoint saat ini belum optimal"
-            ),
-            "impact": (
-                f"Jika rekomendasi diikuti: recovery {d['recovery_pct']:+.1f}%, "
-                f"OPEX {d['total_opex']:+.0f}/jam, red mud {d['red_mud_t']:+.1f} t"
-            ),
-            "action": f"Sesuaikan setpoint → {_fmt_knobs(ctx['recommended_knobs'])}",
-            "why": why,
-            "confidence": "tinggi" if abs(d["recovery_pct"]) > 0.3 else "sedang",
-        })
+        if fast:
+            # mode Play: optimizer dilewati agar tick mulus — jangan
+            # menampilkan angka rekomendasi yang tidak dihitung
+            out.append({
+                "severity": sev,
+                "title": title,
+                "impact": (
+                    f"Prediksi kondisi ini: recovery "
+                    f"{ctx['predicted_now']['recovery_pct']:.1f}%, OPEX "
+                    f"{ctx['predicted_now']['total_opex']:,.0f}/jam"
+                ),
+                "action": "Tekan ⏸ Pause — rekomendasi setpoint penuh "
+                          "(optimizer) dihitung saat berhenti",
+                "why": "Mode Play memakai jalur ringan agar replay mulus",
+                "confidence": "—",
+            })
+        else:
+            why = "; ".join(
+                f"{f['label']} = {f['value']:.1f} ({f['direction']} recovery)"
+                for f in ctx["shap_factors"]
+            )
+            out.append({
+                "severity": sev,
+                "title": title,
+                "impact": (
+                    f"Jika rekomendasi diikuti: recovery {d['recovery_pct']:+.1f}%, "
+                    f"OPEX {d['total_opex']:+.0f}/jam, red mud {d['red_mud_t']:+.1f} t"
+                ),
+                "action": f"Sesuaikan setpoint → {_fmt_knobs(ctx['recommended_knobs'])}",
+                "why": why,
+                "confidence": "tinggi" if abs(d["recovery_pct"]) > 0.3 else "sedang",
+            })
 
     # 2) Dosis CaO (kaustisasi soda mati — klaim #2 Ainin, fallback stoikiometri)
     ca = ctx["cao_advisory"]
