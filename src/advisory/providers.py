@@ -154,26 +154,36 @@ def _template_explain(context: dict) -> str:
     return "\n".join(lines)
 
 
-def explain_chart(chart_title: str, context: dict,
-                  question: str = "") -> tuple[str, str]:
+def explain_chart(chart_title: str, context: dict, question: str = "",
+                  tags: list[str] | None = None) -> tuple[str, str]:
     """Analisis AI untuk satu chart -> (markdown, backend). Selalu berhasil.
 
     Konteks = HANYA angka milik chart tsb (grounding ketat per-chart);
-    pertanyaan bebas user opsional.
+    `tags` menarik dokumen Knowledge Pack pabrik yang relevan (AI wajib
+    mengutip nama dokumen); pertanyaan bebas user opsional.
     """
+    from src.advisory import knowledge
+
     name = provider_name()
     fn = _BACKENDS.get(name)
     if fn is not None:
         prompt = f"Chart: {chart_title}\nKonteks angka:\n" + json.dumps(
             context, ensure_ascii=False, default=str
         )
+        prompt += knowledge.as_prompt_block(tags)
         if question.strip():
             prompt += f"\n\nPertanyaan operator: {question.strip()}"
         try:
             return fn(prompt, _EXPLAIN_SYSTEM), name
         except Exception:
             pass
-    return _template_explain(context), "template"
+    text = _template_explain(context)
+    refs = knowledge.for_tags(tags)
+    if refs:
+        text += ("\n\n**Knowledge pabrik terkait:** "
+                 + ", ".join(f"`{d['name']}`" for d in refs)
+                 + " (lihat halaman Knowledge)")
+    return text, "template"
 
 
 def handover_report(shift_summary: dict) -> tuple[str, str]:

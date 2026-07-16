@@ -27,8 +27,8 @@ import pandas as pd
 import streamlit as st
 
 from app import ui
-from app.views import (digestion, liquor, overview, pfd, precip,
-                       prediction_lab, redmud)
+from app.views import (digestion, knowledge_page, liquor, overview, pfd,
+                       precip, prediction_lab, redmud)
 from src import capability
 from src.advisory import context as adv_context
 from src.advisory import providers, template
@@ -295,6 +295,8 @@ elif page == ui.NAV_LABELS["lab"]:
         prediction_lab.render(df)
     else:
         ui.empty_state("Prediction Lab", "model surrogate belum terlatih")
+elif page == ui.NAV_LABELS["knowledge"]:
+    knowledge_page.render()
 
 # ---------- auto play ----------
 if ss.playing:

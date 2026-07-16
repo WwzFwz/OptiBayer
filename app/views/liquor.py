@@ -54,7 +54,7 @@ def render(row: pd.Series, ctx: dict):
     st.plotly_chart(ui.base_layout(fig, height=380), width="stretch")
 
     total_loss = nb["dsp_loss_t"] + nb["dead_soda_net_t"] + nb["physical_loss_t"]
-    ui.explain_chart("sankey_na", "Sankey Natrium (kebocoran NaOH)", {
+    ui.explain_chart("sankey_na", "Sankey Natrium (kebocoran NaOH)", tags=["naoh", "liquor", "sankey_na", "kaustisasi", "soda-mati"], context={
         "naoh_makeup_t_per_jam": nb["makeup_t"],
         "naoh_recycle_t": nb["recycled_t"],
         "loss_dsp_t": nb["dsp_loss_t"],

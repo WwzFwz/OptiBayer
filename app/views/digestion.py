@@ -68,7 +68,7 @@ def render(row: pd.Series, ctx: dict):
         xaxis_title="Suhu Digester (°C)", yaxis_title="Konsentrasi NaOH (g/L)"
     )
     st.plotly_chart(ui.base_layout(fig, height=430), width="stretch")
-    ui.explain_chart("opmap", "Peta Operasi Digesti", {
+    ui.explain_chart("opmap", "Peta Operasi Digesti", tags=["silika", "digesti", "opmap", "advisory"], context={
         "silika_reaktif_pct": comp["reactive_sio2_pct"],
         "posisi_sekarang": {k: knobs_now[k] for k in schema.KNOBS},
         "rekomendasi_optimizer": {k: float(reco[k]) for k in schema.KNOBS},

@@ -351,7 +351,7 @@ def _regret_handover_section(df: pd.DataFrame, seq: pd.DataFrame, hour: int) -> 
                     title="Recovery: aktual vs counterfactual (area = regret)",
                 )
                 st.plotly_chart(fig_cf, width="stretch", key="ov_regret_chart")
-            ui.explain_chart("regret", "Regret Meter (counterfactual 8 jam)", {
+            ui.explain_chart("regret", "Regret Meter (counterfactual 8 jam)", tags=["regret", "advisory", "presipitasi"], context={
                 "aktual": rg["actual"],
                 "seandainya_advisory_diikuti": rg["counterfactual"],
                 "selisih": rg["delta"],

@@ -94,6 +94,24 @@ skala pabrik).
   Model B precipitation yield + neraca massa deterministik; end-to-end tetap sebagai
   cross-check (doc 06 Bag. 8, "digital twin modular")
 
+## Knowledge Pack (2026-07-15)
+
+**Keputusan:** pengetahuan expert ANTAM dijadikan sumber kecerdasan ke-3
+(setelah data historian & fisika) via **Knowledge Pack tier-1**: folder
+`knowledge/*.md` ber-header `tags:`, loader `src/advisory/knowledge.py`,
+disuntikkan ke prompt tombol "Analisis AI" per chart (AI wajib mengutip nama
+dokumen), halaman Knowledge di app utk lihat/upload. Konten awal = **MOCK**
+(ditandai `status:` di tiap file) — arsitektur yang dinilai, isi tinggal
+diganti expert. TANPA vector DB: volume SOP/catatan pakar puluhan halaman,
+pencocokan tag cukup & auditable.
+
+**Jalur upgrade tier-2 (bila ANTAM punya ribuan halaman, mis. jurnal riset):**
+ganti isi `knowledge.py` dengan embeddings + vector store lokal (FAISS/Chroma),
+chunking + sitasi per-potongan, kurasi berperan (hanya expert menambah),
+versioning — SEMUA pemanggil (`explain_chart`, advisory) tidak berubah karena
+kontraknya tetap `for_tags()/as_prompt_block()`. Estimasi 1-2 hari + dependensi
+baru; JANGAN sebelum demo.
+
 ## Ide masa depan (pasca-hackathon / kalau menang)
 
 - Soft sensor causticity dilatih dari data historian + LIMS nyata (klaim #2 Ainin penuh)

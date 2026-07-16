@@ -65,6 +65,7 @@ NAV_LABELS = {
     "precip": ":material/ac_unit: Presipitasi",
     "redmud": ":material/recycling: Red Mud & CCUS",
     "lab": ":material/biotech: Prediction Lab",
+    "knowledge": ":material/menu_book: Knowledge",
 }
 
 
@@ -288,7 +289,8 @@ def advisory_card(card: dict, key: str):
                     goto("digestion")
 
 
-def explain_chart(chart_id: str, title: str, context: dict):
+def explain_chart(chart_id: str, title: str, context: dict,
+                  tags: list[str] | None = None):
     """Tombol 'Analisis AI' reusable di bawah sebuah chart.
 
     Konteks = angka milik chart itu saja (grounding per-chart). Jawaban
@@ -306,7 +308,7 @@ def explain_chart(chart_id: str, title: str, context: dict):
         if st.button("Analisis", key=f"exb_{chart_id}",
                      icon=":material/auto_awesome:"):
             with st.spinner("Menganalisis angka chart..."):
-                ans, backend = providers.explain_chart(title, context, q)
+                ans, backend = providers.explain_chart(title, context, q, tags)
             st.session_state[f"exa_{chart_id}"] = (ans, backend, q)
         cached = st.session_state.get(f"exa_{chart_id}")
         if cached:

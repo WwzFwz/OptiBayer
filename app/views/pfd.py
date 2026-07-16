@@ -337,7 +337,8 @@ def render(row: pd.Series, ctx: dict, hist: pd.DataFrame | None = None):
             "nilai_rp": ctx["carbonation"]["carbon_value_idr"],
         },
     }
-    ui.explain_chart("pfd", f"Diagram Proses (lapisan: {layer})", _ex_ctx)
+    _layer_tags = {"Operasi": ["pfd", "advisory"], "Kebocoran NaOH": ["naoh", "soda-mati", "kaustisasi", "pfd"], "Jalur Karbon (CCUS)": ["ccus", "redmud", "karbon"]}
+    ui.explain_chart("pfd", f"Diagram Proses (lapisan: {layer})", _ex_ctx, tags=_layer_tags.get(layer))
 
     # ================= gauge ala panel SCADA =================
     g1, g2, g3 = st.columns(3)
