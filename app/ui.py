@@ -285,7 +285,9 @@ def advisory_card(card: dict, key: str):
                     unsafe_allow_html=True,
                 )
             else:
-                c1, c2, c3, _ = st.columns([1.2, 1.2, 1.6, 2], vertical_alignment="center")
+                # tiga tombol SAMA lebar (simetris) + spacer kanan
+                c1, c2, c3, _ = st.columns([1, 1, 1, 2.2],
+                                           vertical_alignment="center")
                 if c1.button("Terima", key=f"acc_{key}", type="primary",
                              icon=":material/check_circle:", width="stretch"):
                     st.session_state.advisory_log.append(
