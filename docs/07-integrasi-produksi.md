@@ -42,6 +42,71 @@ replay dicabut, connector historian dicolok. Lapis model/fisika/optimizer/adviso
 - [ ] AuthN/AuthZ: AD/SSO, role CRO / supervisor / engineer
 - [ ] LLM: deployment VPC/on-prem atau redaksi data sensitif; fallback template
 
+## Antarmuka Integrasi (pertukaran data dengan sistem eksisting)
+
+Prinsip: inti OptiBayer sudah *headless* (semua fungsi bisa dipanggil tanpa
+dashboard, doc 09 §5) — antarmuka integrasi hanyalah pembungkus tipis di
+atasnya. Tiga tier, urut prioritas:
+
+### Tier 1 — REST API service (wajib, universal)
+
+Pembungkus FastAPI/Flask di atas fungsi inti; Streamlit menjadi salah satu
+klien saja. Semua sistem pabrik/BI (PI Vision, PowerBI, HMI vendor, ERP)
+bisa konsumsi; OpenAPI schema gratis untuk tim IT ANTAM.
+
+| Endpoint (v1, read-only) | Sumber fungsi | Konsumen tipikal |
+|---|---|---|
+| `POST /v1/predict` (komposisi+setpoint → 4 target) | `models.predict` | HMI, BI, what-if eksternal |
+| `POST /v1/optimize/pareto` · `/goal-seek` | `optimize.*` | advisory eksternal, planner |
+| `POST /v1/mass-balance` (± feed rate/moisture) | `physics.mass_balance` | engineering, validasi |
+| `POST /v1/advisory/context` (kondisi → kartu) | `advisory.context/template` | notifikasi, mobile |
+| `GET /v1/knowledge?tags=` | `advisory.knowledge` | copilot lain, portal SOP |
+| `GET /v1/audit/decisions` | advisory_log.csv | compliance, laporan |
+
+Lintas-endpoint: API-key/AD auth, versioning `/v1`, read-only (menulis
+setpoint ke DCS TIDAK lewat sini — itu fase 3 dengan jalurnya sendiri).
+⚠ Catatan dependensi saat ini: streamlit terbaru memaksa `starlette 1.3`
+yang bentrok pin `fastapi 0.115` — implementasi memakai **Flask** (bebas
+starlette) atau fastapi versi baru; JANGAN dipasang mendekati demo.
+
+### Tier 2 — Event/stream untuk data pabrik (pertukaran data industri)
+
+Request-response tidak cukup untuk OT; tambahkan:
+- **Inbound**: connector historian OPC UA (sudah di roadmap Lapis 0) +
+  file-drop CSV (sudah jalan — adapter).
+- **Outbound**: advisory & alarm dipublikasikan ke **MQTT** (standar IIoT,
+  ringan, cocok jaringan OT) — HMI/Andon/notifikasi apa pun tinggal
+  subscribe topik `optibayer/advisory/#`. Alternatif Kafka bila IT ANTAM
+  sudah memakainya.
+
+### Tier 3 — MCP server (pembeda: digital twin sebagai tools untuk agent)
+
+Model Context Protocol mengekspos kemampuan OptiBayer sebagai **tools yang
+bisa dipanggil LLM agent mana pun** (copilot internal ANTAM, Claude, dsb):
+`predict_setpoint`, `optimize_pareto`, `run_mass_balance`,
+`query_knowledge`, `get_shift_report`. Biayanya kecil karena fungsi inti
+sudah murni & ber-kontrak; nilainya besar: begitu ANTAM punya inisiatif
+copilot, OptiBayer langsung menjadi "otak proses"-nya tanpa integrasi baru.
+Kalimat pitch: *"agent-ready — sistem AI masa depan ANTAM bisa memakai
+digital twin ini sebagai alat, bukan membangun ulang."*
+
+```mermaid
+flowchart LR
+    CORE["Inti OptiBayer (headless)<br/>predict · optimize · mass_balance ·<br/>advisory · knowledge"]
+    UI["Streamlit CRO Console"] --> CORE
+    REST["REST API /v1<br/>(read-only, auth)"] --> CORE
+    MCP["MCP server<br/>(tools utk LLM agent)"] --> CORE
+    CORE --> MQTT["MQTT broker<br/>optibayer/advisory/#"]
+    BI["PI Vision / PowerBI / HMI"] --> REST
+    AGENT["Copilot ANTAM / agent"] --> MCP
+    MQTT --> NOTIF["HMI lain · Andon · notifikasi"]
+    HISTREAL["Historian (OPC UA)"] --> CORE
+```
+
+Urutan implementasi yang disarankan: REST (1–2 hari) → MQTT publisher
+(½ hari) → MCP (1 hari). Semuanya PASCA-demo — sebelum demo cukup desain
+ini + prinsip headless yang sudah terbukti lewat tests CLI.
+
 ## Keamanan — poin siap pakai untuk menjawab juri
 
 1. Read-only terhadap pabrik (Fase 1–2) → kompromi aplikasi ≠ kompromi kontrol.
