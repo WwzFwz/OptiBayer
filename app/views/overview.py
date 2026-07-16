@@ -25,11 +25,10 @@ import streamlit as st
 from plotly.subplots import make_subplots
 
 from app import ui
-from src import capability, schema
+from src import schema
 from src.models import predict as mpredict
 from src.advisory import knowledge, providers
 from src.optimize import regret
-from src.physics import na_balance
 
 # pita operasi aman — skala pabrik data v2 (OPEX ~1k-54k/jam, red mud ~240-640 t)
 BANDS = {
@@ -247,63 +246,6 @@ def _correlation_section(df: pd.DataFrame) -> None:
 # --------------------------------------------------------------------------
 # 3) Neraca material masuk-keluar (Sankey) + regret/handover
 # --------------------------------------------------------------------------
-def _sankey_al(row: pd.Series) -> go.Figure:
-    feed = max(float(row["al_feed_t"]), 0.0)
-    recyc = max(float(row["al_recycled_t"]), 0.0)
-    prod = max(float(row["hydrate_t"]), 0.0)
-    lost = max(float(row["al_lost_redmud_t"]), 0.0)
-    sisa = max(feed + recyc - prod - lost, 0.0)
-
-    labels = ["Bauxite Segar (Al)", "Recycle Spent Liquor (Al)",
-              "Digesti + Presipitasi", "Produk Al(OH)₃", "Red Mud (hilang)",
-              "Kembali ke Liquor"]
-    idx = dict(bauxite=0, recycle=1, proc=2, prod=3, lost=4, back=5)
-    colors = [ui.SERIES[0], ui.SERIES[4], ui.MUTED, ui.STATUS["good"],
-              ui.STATUS["critical"], ui.SERIES[1]]
-    fig = go.Figure(go.Sankey(
-        arrangement="snap",
-        node=dict(label=labels, color=colors, pad=18, thickness=16,
-                  line=dict(color=ui.GRID, width=0.5)),
-        link=dict(
-            source=[idx["bauxite"], idx["recycle"], idx["proc"], idx["proc"], idx["proc"]],
-            target=[idx["proc"], idx["proc"], idx["prod"], idx["lost"], idx["back"]],
-            value=[feed, recyc, prod, lost, sisa],
-            color=["rgba(57,135,229,0.35)", "rgba(144,133,233,0.35)",
-                   "rgba(12,163,12,0.35)", "rgba(208,59,59,0.35)",
-                   "rgba(137,135,129,0.30)"],
-        ),
-    ))
-    return ui.base_layout(fig, height=360, title="Neraca Aluminium (ton/jam)")
-
-
-def _sankey_na(row: pd.Series) -> go.Figure:
-    nb = na_balance.breakdown(row)
-    makeup, recycled = nb["makeup_t"], nb["recycled_t"]
-    dsp, dead, phys = nb["dsp_loss_t"], nb["dead_soda_net_t"], nb["physical_loss_t"]
-    back = max(nb["consumed_t"] - dsp - dead - phys, 0.0)
-
-    labels = ["NaOH Make-up (segar)", "NaOH Recycle (liquor)", "Total NaOH Terpakai",
-              "Terkunci di DSP (silika)", "Soda Mati (karbonasi net)",
-              "Hilang Fisik (RM, dll)", "Kembali ke Liquor"]
-    idx = dict(makeup=0, recyc=1, used=2, dsp=3, dead=4, phys=5, back=6)
-    colors = [ui.SERIES[0], ui.SERIES[4], ui.MUTED, ui.STATUS["warning"],
-              ui.STATUS["serious"], ui.STATUS["critical"], ui.STATUS["good"]]
-    fig = go.Figure(go.Sankey(
-        arrangement="snap",
-        node=dict(label=labels, color=colors, pad=18, thickness=16,
-                  line=dict(color=ui.GRID, width=0.5)),
-        link=dict(
-            source=[idx["makeup"], idx["recyc"], idx["used"], idx["used"], idx["used"], idx["used"]],
-            target=[idx["used"], idx["used"], idx["dsp"], idx["dead"], idx["phys"], idx["back"]],
-            value=[makeup, recycled, dsp, dead, phys, back],
-            color=["rgba(57,135,229,0.35)", "rgba(144,133,233,0.35)",
-                   "rgba(250,178,25,0.35)", "rgba(236,131,90,0.35)",
-                   "rgba(208,59,59,0.35)", "rgba(12,163,12,0.30)"],
-        ),
-    ))
-    return ui.base_layout(fig, height=360, title="Neraca NaOH (ton/jam)")
-
-
 def _regret_handover_section(df: pd.DataFrame, seq: pd.DataFrame, hour: int) -> None:
     st.caption(
         "Berapa banyak recovery/OPEX yang 'tertinggal di meja' bila parameter "
@@ -382,25 +324,6 @@ def _regret_handover_section(df: pd.DataFrame, seq: pd.DataFrame, hour: int) -> 
             st.caption(f"dibuat via backend: {backend}")
 
 
-def _material_flow_section(df: pd.DataFrame, row: pd.Series) -> None:
-    caps = capability.detect(df)
-    c1, c2 = st.columns(2)
-    with c1:
-        if caps.get("sankey_al"):
-            st.plotly_chart(_sankey_al(row), width="stretch", key="ov_sankey_al")
-        else:
-            ui.empty_state("Sankey Aluminium", "kolom neraca aluminium tidak tersedia")
-    with c2:
-        if caps.get("sankey_na"):
-            st.plotly_chart(_sankey_na(row), width="stretch", key="ov_sankey_na")
-        else:
-            ui.empty_state("Sankey NaOH", "kolom neraca natrium tidak tersedia")
-    st.divider()
-    _regret_handover_section(df, st.session_state.get("_seq_ref", df), int(row.name) if row.name is not None else 0)
-    st.divider()
-    _audit_trail_section()
-
-
 def _audit_trail_section() -> None:
     """Audit trail keputusan advisory: log sesi + file persisten (lintas restart)."""
     from pathlib import Path
@@ -435,6 +358,25 @@ def _audit_trail_section() -> None:
             )
 
 
+def _material_flow_section(df: pd.DataFrame, row: pd.Series) -> None:
+    st.caption(
+        "Neraca material (Sankey) kini SATU rumah di tab stasiunnya masing-"
+        "masing — lengkap dengan kartu dosis, panel karbonasi, dan Analisis AI."
+    )
+    c1, c2 = st.columns(2)
+    if c1.button("Sankey NaOH → Liquor Loop", icon=":material/science:",
+                 width="stretch", key="ov_goto_liquor"):
+        ui.goto("liquor")
+    if c2.button("Sankey Aluminium → Red Mud & CCUS", icon=":material/recycling:",
+                 width="stretch", key="ov_goto_redmud"):
+        ui.goto("redmud")
+    st.divider()
+    _regret_handover_section(df, st.session_state.get("_seq_ref", df),
+                             int(row.name) if row.name is not None else 0)
+    st.divider()
+    _audit_trail_section()
+
+
 # --------------------------------------------------------------------------
 def render(df: pd.DataFrame, seq: pd.DataFrame, hour: int) -> None:
     st.session_state["_seq_ref"] = seq  # dipakai _material_flow_section
@@ -442,7 +384,7 @@ def render(df: pd.DataFrame, seq: pd.DataFrame, hour: int) -> None:
 
     t1, t2, t3 = st.tabs([
         ":material/show_chart: Tren Historis", ":material/scatter_plot: Korelasi & Scatter",
-        ":material/balance: Neraca Material",
+        ":material/rule: Regret, Handover & Audit",
     ])
     with t1:
         _trend_section(seq, hour)

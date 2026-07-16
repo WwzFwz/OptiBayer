@@ -183,7 +183,19 @@ def render(row: pd.Series, ctx: dict):
                 st.plotly_chart(pcfig, width="stretch", key="dig_pareto_par")
 
     st.divider()
-    st.subheader("What-if: geser setpoint, lihat prediksi")
+    st.subheader("What-if cepat — setpoint untuk feed JAM INI")
+    st.caption(
+        "Komposisi feed terkunci pada jam replay aktif (pertanyaan operator: "
+        "'kalau kuubah knob sekarang?'). Untuk eksperimen bebas — ubah "
+        "komposisi/feed rate, bandingkan ML vs kalkulator fisika — pakai "
+        "Prediction Lab."
+    )
+    if st.button("Muat jam ini → Prediction Lab", icon=":material/biotech:",
+                 key="dig_to_lab"):
+        from app.views import prediction_lab as _pl
+        _pl._apply_row(row)
+        st.session_state["_pl_init"] = True
+        ui.goto("lab")
     cols = st.columns(5)
     what_if = {}
     for col, k in zip(cols, schema.KNOBS):
