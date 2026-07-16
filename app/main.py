@@ -238,27 +238,41 @@ ui.kpi(k[3], "Red Mud", f"{row['red_mud_t']:.1f} t",
 ui.kpi(k[4], "Potensi CO₂ capture", f"{co2_now:.2f} t", "good")
 ui.kpi(k[5], "Causticity", f"{row.get('causticity', 0.85):.2f}", "good")
 
-# ---------- advisory (selalu terlihat, doc 10) ----------
-st.markdown("#### Advisory")
-cards = template.cards(ctx)
-# 3 terpenting selalu tampil (anti alarm-fatigue); sisanya tetap bisa diakses
-for i, card in enumerate(cards[:3]):
-    ui.advisory_card(card, key=f"{ss.hour}_{i}")
-if len(cards) > 3:
-    _extra = cards[3:]
-    with st.expander(
-        f":material/expand_more: Lihat {len(_extra)} advisory lainnya "
-        f"(prioritas lebih rendah)"
-    ):
-        for i, card in enumerate(_extra, start=3):
-            ui.advisory_card(card, key=f"{ss.hour}_{i}")
+# ---------- advisory: penuh di Overview & Diagram, ringkas di stasiun, ----------
+# ---------- hilang di Lab/Knowledge (bebas replay -> advisory = noise) ----------
+_page_now = ss.get("nav") or ui.NAV_LABELS["overview"]
+_FULL_ADVISORY = {ui.NAV_LABELS["overview"], ui.NAV_LABELS["pfd"]}
+_COMPACT_ADVISORY = {ui.NAV_LABELS["digestion"], ui.NAV_LABELS["liquor"],
+                     ui.NAV_LABELS["precip"], ui.NAV_LABELS["redmud"]}
 
-if providers.provider_name() != "template":
-    with st.expander(":material/smart_toy: Narasi advisory (LLM)"):
-        if st.button("Generate narasi"):
-            text, backend = providers.advise(ctx)
-            st.markdown(text)
-            st.caption(f"backend: {backend}")
+cards = template.cards(ctx)
+if _page_now in _FULL_ADVISORY:
+    st.markdown("#### Advisory")
+    # 3 terpenting selalu tampil (anti alarm-fatigue); sisanya tetap bisa diakses
+    for i, card in enumerate(cards[:3]):
+        ui.advisory_card(card, key=f"{ss.hour}_{i}")
+    if len(cards) > 3:
+        _extra = cards[3:]
+        with st.expander(
+            f":material/expand_more: Lihat {len(_extra)} advisory lainnya "
+            f"(prioritas lebih rendah)"
+        ):
+            for i, card in enumerate(_extra, start=3):
+                ui.advisory_card(card, key=f"{ss.hour}_{i}")
+    if providers.provider_name() != "template":
+        with st.expander(":material/smart_toy: Narasi advisory (LLM)"):
+            if st.button("Generate narasi"):
+                text, backend = providers.advise(ctx)
+                st.markdown(text)
+                st.caption(f"backend: {backend}")
+elif _page_now in _COMPACT_ADVISORY and cards:
+    top = cards[0]
+    icon = ui.SEV_ICON.get(top["severity"], "🔵")
+    with st.expander(
+        f"{icon} Advisory ({len(cards)}) — {top['title']}", expanded=False,
+    ):
+        for i, card in enumerate(cards[:3]):
+            ui.advisory_card(card, key=f"{ss.hour}_{i}")
 
 # ---------- navigasi = stasiun (doc 10) ----------
 # segmented control ber-state (bukan st.tabs) supaya tombol lain bisa

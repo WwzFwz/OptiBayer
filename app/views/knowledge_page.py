@@ -29,8 +29,22 @@ def render() -> None:
     left, right = st.columns([3, 2])
 
     with left:
-        st.markdown(f"**{len(docs)} dokumen aktif**")
-        for d in docs:
+        q = st.text_input(
+            "Cari dokumen", key="kn_search", placeholder="cari judul / tag / isi…",
+            icon=":material/search:",
+        )
+        shown = docs
+        if q.strip():
+            needle = q.strip().lower()
+            shown = [d for d in docs
+                     if needle in d["name"].lower()
+                     or needle in " ".join(d["tags"]).lower()
+                     or needle in d["body"].lower()]
+        st.markdown(f"**{len(shown)} dari {len(docs)} dokumen**"
+                    + (f" · filter: `{q.strip()}`" if q.strip() else ""))
+        if not shown:
+            st.caption("Tidak ada dokumen cocok — coba kata kunci lain.")
+        for d in shown:
             label = f"{d['name']}  ·  tag: {', '.join(d['tags']) or '—'}"
             with st.expander(label):
                 if d["status"]:
@@ -56,8 +70,33 @@ def render() -> None:
                     dest.write_bytes(up.getvalue())
                     st.success(f"Tersimpan: `{safe}` — langsung dipakai AI "
                                "(tanpa restart).")
+        with st.container(border=True):
+            st.markdown("**Atau tulis langsung**")
+            t_name = st.text_input("Nama dokumen", key="kn_name",
+                                   placeholder="mis. sop-mud-washing")
+            t_tags = st.text_input("Tag (pisah koma)", key="kn_tags",
+                                   placeholder="mis. redmud, washing, naoh")
+            t_body = st.text_area("Isi (markdown)", key="kn_body", height=160,
+                                  placeholder="Tulis SOP / catatan pakar di sini…")
+            if st.button("Simpan dokumen", type="primary",
+                         icon=":material/save:", key="kn_save_direct"):
+                if not t_name.strip() or not t_body.strip():
+                    st.error("Nama & isi wajib diisi.")
+                else:
+                    safe = re.sub(r"[^A-Za-z0-9._-]", "-", t_name.strip().lower())
+                    dest = knowledge.KNOWLEDGE_DIR / f"{safe}.md"
+                    knowledge.KNOWLEDGE_DIR.mkdir(exist_ok=True)
+                    dest.write_text(
+                        f"tags: {t_tags.strip()}\n"
+                        f"status: ditulis via dashboard — menunggu review\n\n"
+                        f"{t_body.strip()}\n",
+                        encoding="utf-8",
+                    )
+                    st.success(f"Tersimpan: `{safe}.md` — langsung dipakai AI.")
+
         st.caption(
             "Format: baris 1 `tags: ...`, baris 2 opsional `status: ...`, "
             "sisanya markdown bebas. Aturan kuantitatif dari expert juga bisa "
-            "diangkat jadi guardrail deterministik (roadmap)."
+            "diangkat jadi guardrail deterministik (roadmap); produksi: kurasi "
+            "berperan + approval (doc 07/08)."
         )
