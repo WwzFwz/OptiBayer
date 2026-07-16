@@ -116,6 +116,9 @@ if not hasattr(ui, "apply"):
 ui.apply(ss.theme_mode)   # palet chart mengikuti mode SEBELUM view dirender
 ui.inject_css(ss.theme_mode)  # light mode penuh + gaya tombol (lihat ui.py)
 ss.setdefault("nav", ui.NAV_LABELS["overview"])
+# terapkan lompatan navigasi tertunda (ui.goto) SEBELUM widget nav dibuat
+if "_nav_target" in ss:
+    ss["nav"] = ss.pop("_nav_target")
 ss.setdefault("onboard_done", False)
 
 # ---------- sidebar: kendali replay & prioritas ----------
@@ -198,11 +201,51 @@ _subtitle = (
     f"Hari {_day} · {_clock:02d}:00 · Shift {_shift} · Skenario: {ss.scenario}"
     if _is_monitoring else "Halaman bebas replay"
 )
-st.markdown(
+_hcol, _helpcol = st.columns([8, 1], vertical_alignment="center")
+_hcol.markdown(
     f"### OptiBayer · Pabrik Alumina — Konsol CRO  "
     f"<span style='color:{ui.MUTED};font-size:0.7em'>{_subtitle}</span>",
     unsafe_allow_html=True,
 )
+with _helpcol.popover("Bantuan", icon=":material/help:", width="stretch"):
+    st.markdown(
+        """
+**Mulai cepat (alur demo terbaik)**
+1. Sidebar → skenario **Gangguan: Silika Spike** → tekan **▶ Play**.
+2. Sekitar jam 24: KPI memerah, kartu **Advisory** muncul — baca dampak &
+   rekomendasinya, klik **Lihat peta operasi** untuk konteks, lalu
+   **Terima/Tolak** (tercatat di audit trail).
+3. Akhir shift: Overview → *Regret, Handover & Audit* → hitung regret +
+   buat laporan serah terima.
+
+**Halaman (navigasi atas, urut alur pabrik hulu→hilir)**
+- **Overview** — tren + korelasi + regret/handover/audit.
+- **Diagram Proses** — peta HMI live; ganti *lapisan analitik* untuk cerita
+  kebocoran NaOH / jalur karbon.
+- **Digesti** — peta operasi (posisi vs rekomendasi ★), radar setpoint,
+  kurva Pareto, what-if cepat feed jam ini.
+- **Liquor Loop** — Sankey ke mana NaOH bocor + dosis CaO.
+- **Presipitasi** — kurva ekuilibrium & gap supersaturasi.
+- **Red Mud & CCUS** — Sankey aluminium + kalkulator karbonasi CO₂.
+- **Prediction Lab** — eksperimen bebas: komposisi, feed rate,
+  ML vs kalkulator fisika, sensitivitas.
+- **Knowledge** — pengetahuan expert yang dipakai AI (bisa tambah sendiri).
+
+**Panel kendali (sidebar)** — replay & skenario, bobot prioritas optimasi,
+mode terang/gelap.
+
+**Arti warna status** — 🟢 normal · 🟡 mendekati ambang · 🟠 keluar pita ·
+🔴 kritis. Panah delta: hijau = membaik (arah sudah memperhitungkan bahwa
+naiknya OPEX/silika/red mud itu buruk).
+
+**Tombol ✨ Analisis AI** (di bawah chart kunci) — jawaban dihitung HANYA
+dari angka chart tsb + knowledge pabrik ber-sitasi; tanpa API key jatuh ke
+ringkasan angka.
+
+Dokumentasi lengkap: `docs/13-panduan-setup.md` (setup & tur fitur),
+`docs/16-tutorial-deploy.md` (deploy).
+        """
+    )
 
 # ---------- onboarding sekali-tampil (hanya di Overview) ----------
 if not ss.onboard_done and _page_now == ui.NAV_LABELS["overview"]:

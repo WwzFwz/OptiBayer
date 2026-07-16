@@ -70,8 +70,14 @@ NAV_LABELS = {
 
 
 def goto(page: str) -> None:
-    """Lompat programatik ke halaman navigasi (dipanggil tombol jembatan)."""
-    st.session_state["nav"] = NAV_LABELS[page]
+    """Lompat programatik ke halaman navigasi (dipanggil tombol jembatan).
+
+    Key widget `nav` TIDAK boleh ditulis setelah widget-nya dirender pada run
+    yang sama (StreamlitAPIException) — tombol jembatan selalu berada di bawah
+    segmented control. Maka: tulis ke key perantara, rerun, dan main.py
+    memindahkannya ke `nav` di puncak script SEBELUM widget dibuat.
+    """
+    st.session_state["_nav_target"] = NAV_LABELS[page]
     st.rerun()
 
 
