@@ -273,7 +273,7 @@ def _sankey_al(row: pd.Series) -> go.Figure:
                    "rgba(137,135,129,0.30)"],
         ),
     ))
-    return ui.base_layout(fig, height=340, title="Neraca Aluminium (ton/jam)")
+    return ui.base_layout(fig, height=360, title="Neraca Aluminium (ton/jam)")
 
 
 def _sankey_na(row: pd.Series) -> go.Figure:
@@ -301,7 +301,7 @@ def _sankey_na(row: pd.Series) -> go.Figure:
                    "rgba(208,59,59,0.35)", "rgba(12,163,12,0.30)"],
         ),
     ))
-    return ui.base_layout(fig, height=340, title="Neraca NaOH (ton/jam)")
+    return ui.base_layout(fig, height=360, title="Neraca NaOH (ton/jam)")
 
 
 def _regret_handover_section(df: pd.DataFrame, seq: pd.DataFrame, hour: int) -> None:

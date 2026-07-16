@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from app import ui
+from src.advisory import knowledge
 from src.physics import precipitation
 
 
@@ -48,6 +49,20 @@ def render(row: pd.Series, ctx: dict):
         ))
         fig.update_layout(xaxis_title="Suhu (°C)", yaxis_title="Al₂O₃ terlarut (g/L)")
         st.plotly_chart(ui.base_layout(fig, height=380), width="stretch")
+
+    ui.explain_chart("ceq", "Kurva Ceq — Gap Supersaturasi",
+                     tags=knowledge.CHART_TAGS["ceq"]["tags"], context={
+                         "alumina_terlarut_a_gl": a_gl,
+                         "ceq_pada_suhu_operasi_gl": float(
+                             precipitation.ceq(t_now, caustic)),
+                         "gap_supersaturasi_gl": gap,
+                         "suhu_presipitasi_c": t_now,
+                         "kaustik_gl": caustic,
+                         "yield_sekarang_pct": ctx["predicted_now"].get(
+                             "precip_yield_pct"),
+                         "yield_jika_rekomendasi_pct": ctx[
+                             "predicted_if_followed"].get("precip_yield_pct"),
+                     })
 
     st.divider()
     d = ctx["delta_if_followed"]

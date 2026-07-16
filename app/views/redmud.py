@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from app import ui
+from src.advisory import knowledge
 from src.physics import carbonation
 
 
@@ -31,7 +32,7 @@ def render(row: pd.Series, ctx: dict):
             color=ui.LINK_FADE,
         ),
     ))
-    st.plotly_chart(ui.base_layout(fig, height=340), width="stretch")
+    st.plotly_chart(ui.base_layout(fig, height=360), width="stretch")
     st.caption(
         f"Satuan: ton Al/jam (skala pabrik). Hilang ke red mud: "
         f"**{al_lost:.1f} t Al** ({al_lost / al_feed * 100:.1f}% feed) — "
@@ -55,6 +56,17 @@ def render(row: pd.Series, ctx: dict):
     c[1].metric("CO₂ tersekuestrasi", f"{res.co2_sequestered_t:.2f} t")
     c[2].metric("Air dibutuhkan (L/S 2:1)", f"{res.water_needed_t:.0f} t")
     c[3].metric("Nilai karbon", f"Rp{res.carbon_value_idr:,.0f}")
+
+    ui.explain_chart("carbonation", "Karbonasi CCUS Red Mud",
+                     tags=knowledge.CHART_TAGS["carbonation"]["tags"], context={
+                         "red_mud_t_per_jam": res.red_mud_t,
+                         "co2_tersekuestrasi_t": res.co2_sequestered_t,
+                         "air_dibutuhkan_ls2_t": res.water_needed_t,
+                         "nilai_karbon_rp": res.carbon_value_idr,
+                         "harga_karbon_rp_per_t": price,
+                         "al_hilang_ke_redmud_t": al_lost,
+                         "al_hilang_pct_feed": al_lost / al_feed * 100,
+                     })
 
     lo, hi = res.ph_after_est
     reg_lo, reg_hi = carbonation.PH_REG_BAND

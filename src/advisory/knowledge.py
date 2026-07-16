@@ -51,6 +51,14 @@ CHART_TAGS: dict[str, dict] = {
         "label": "Diagram Proses — Jalur Karbon",
         "tags": ["ccus", "redmud", "karbon"],
     },
+    "ceq": {
+        "label": "Kurva Ceq (Presipitasi)",
+        "tags": ["presipitasi", "yield", "seed", "suhu"],
+    },
+    "carbonation": {
+        "label": "Karbonasi CCUS (Red Mud)",
+        "tags": ["ccus", "redmud", "karbon", "tailing", "esg"],
+    },
 }
 
 

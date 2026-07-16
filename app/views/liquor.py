@@ -52,7 +52,7 @@ def render(row: pd.Series, ctx: dict):
         link=dict(source=src, target=dst, value=val,
                   color=ui.LINK_FADE),
     ))
-    st.plotly_chart(ui.base_layout(fig, height=380), width="stretch")
+    st.plotly_chart(ui.base_layout(fig, height=360), width="stretch")
 
     total_loss = nb["dsp_loss_t"] + nb["dead_soda_net_t"] + nb["physical_loss_t"]
     ui.explain_chart("sankey_na", "Sankey Natrium (kebocoran NaOH)", tags=knowledge.CHART_TAGS["sankey_na"]["tags"], context={

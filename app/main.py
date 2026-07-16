@@ -204,10 +204,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ---------- onboarding sekali-tampil ----------
-if not ss.onboard_done:
+# ---------- onboarding sekali-tampil (hanya di Overview) ----------
+if not ss.onboard_done and _page_now == ui.NAV_LABELS["overview"]:
     with st.container(border=True):
-        b1, b2, b3 = st.columns([5.5, 2.4, 1.1])
+        b1, b2, b3 = st.columns([5.5, 2.4, 1.1], vertical_alignment="center")
         b1.markdown(
             "**Baru di sini?** Alur demo terbaik: jalankan skenario "
             "**Gangguan: Silika Spike** — perhatikan KPI memerah sekitar jam 24, "
@@ -252,7 +252,11 @@ if _is_monitoring:
            ui.status_of(-row["red_mud_t"], (-500, 0), (-580, -500)),
            _delta("red_mud_t"), invert=True)
     ui.kpi(k[4], "Potensi CO₂ capture", f"{co2_now:.2f} t", "good")
-    ui.kpi(k[5], "Causticity", f"{row.get('causticity', 0.85):.2f}", "good")
+    # (Causticity sengaja BUKAN KPI: konstan 0.85 di data v2 = nol informasi;
+    #  kembali dipajang saat datanya bervariasi / soft sensor aktif)
+    ui.kpi(k[5], "Yield Presipitasi", f"{row['precip_yield_pct']:.1f}%",
+           ui.status_of(row["precip_yield_pct"], (79, 101), (76, 79)),
+           _delta("precip_yield_pct"))
 
 # ---------- advisory: penuh di Overview & Diagram, ringkas di stasiun, ----------
 # ---------- hilang di Lab/Knowledge (bebas replay -> advisory = noise) ----------
