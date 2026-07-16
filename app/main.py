@@ -27,8 +27,8 @@ import pandas as pd
 import streamlit as st
 
 from app import ui
-from app.views import (digestion, knowledge_page, liquor, overview, pfd,
-                       precip, prediction_lab, redmud)
+from app.views import (digestion, integration_page, knowledge_page, liquor,
+                       overview, pfd, precip, prediction_lab, redmud)
 from src import capability
 from src.advisory import context as adv_context
 from src.advisory import providers, template
@@ -37,7 +37,8 @@ from src.data.adapters import load_clean
 from src.physics import carbonation
 
 st.set_page_config(
-    page_title="OptiBayer — CRO Console", page_icon="🏭", layout="wide"
+    page_title="OptiBayer — CRO Console",
+    page_icon=":material/factory:", layout="wide",
 )
 
 # Artefak model di-gitignore (regenerable). Clone segar / deploy cloud:
@@ -190,7 +191,8 @@ ctx = _context(ss.scenario, ss.hour, weights)
 # halaman monitoring = terikat jam replay (KPI/advisory tampil);
 # Prediction Lab & Knowledge bebas replay -> tanpa KPI/jam (bukan konteksnya)
 _page_now = ss.get("nav") or ui.NAV_LABELS["overview"]
-_REPLAY_FREE = {ui.NAV_LABELS["lab"], ui.NAV_LABELS["knowledge"]}
+_REPLAY_FREE = {ui.NAV_LABELS["lab"], ui.NAV_LABELS["knowledge"],
+                ui.NAV_LABELS["integration"]}
 _is_monitoring = _page_now not in _REPLAY_FREE
 
 # jam simulasi kumulatif (0-95) -> tampilan manusiawi: Hari N · HH:00 · Shift
@@ -373,6 +375,8 @@ elif page == ui.NAV_LABELS["lab"]:
         ui.empty_state("Prediction Lab", "model surrogate belum terlatih")
 elif page == ui.NAV_LABELS["knowledge"]:
     knowledge_page.render()
+elif page == ui.NAV_LABELS["integration"]:
+    integration_page.render()
 
 # ---------- auto play ----------
 if ss.playing:

@@ -66,6 +66,7 @@ NAV_LABELS = {
     "redmud": ":material/recycling: Red Mud & CCUS",
     "lab": ":material/biotech: Prediction Lab",
     "knowledge": ":material/menu_book: Knowledge",
+    "integration": ":material/hub: Integrasi",
 }
 
 
