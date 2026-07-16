@@ -20,6 +20,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from app import ui
+from src.advisory import knowledge
 
 _UNIT_W, _UNIT_H = 1.9, 0.9
 _TERM_W, _TERM_H = 1.5, 0.6
@@ -337,7 +338,7 @@ def render(row: pd.Series, ctx: dict, hist: pd.DataFrame | None = None):
             "nilai_rp": ctx["carbonation"]["carbon_value_idr"],
         },
     }
-    _layer_tags = {"Operasi": ["pfd", "advisory"], "Kebocoran NaOH": ["naoh", "soda-mati", "kaustisasi", "pfd"], "Jalur Karbon (CCUS)": ["ccus", "redmud", "karbon"]}
+    _layer_tags = {"Operasi": knowledge.CHART_TAGS["pfd_operasi"]["tags"], "Kebocoran NaOH": knowledge.CHART_TAGS["pfd_kebocoran"]["tags"], "Jalur Karbon (CCUS)": knowledge.CHART_TAGS["pfd_karbon"]["tags"]}
     ui.explain_chart("pfd", f"Diagram Proses (lapisan: {layer})", _ex_ctx, tags=_layer_tags.get(layer))
 
     # ================= gauge ala panel SCADA =================

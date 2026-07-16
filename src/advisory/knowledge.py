@@ -22,6 +22,53 @@ KNOWLEDGE_DIR = Path(__file__).resolve().parents[2] / "knowledge"
 MAX_DOCS_PER_QUERY = 3
 MAX_CHARS_PER_DOC = 2200
 
+# Registry chart-konsumen knowledge — SATU sumber untuk call site tombol
+# "Analisis AI" DAN halaman Knowledge (menampilkan "dokumen ini dipakai oleh
+# chart apa"). Pemetaan lentur: dokumen ikut chart mana pun yang tag-nya
+# beririsan — ubah tag dokumen = ubah pemakaiannya, tanpa sentuh kode.
+CHART_TAGS: dict[str, dict] = {
+    "sankey_na": {
+        "label": "Sankey Natrium (Liquor Loop)",
+        "tags": ["naoh", "liquor", "sankey_na", "kaustisasi", "soda-mati"],
+    },
+    "opmap": {
+        "label": "Peta Operasi (Digesti)",
+        "tags": ["silika", "digesti", "opmap", "advisory"],
+    },
+    "regret": {
+        "label": "Regret Meter (Overview)",
+        "tags": ["regret", "advisory", "presipitasi"],
+    },
+    "pfd_operasi": {
+        "label": "Diagram Proses — Operasi",
+        "tags": ["pfd", "advisory"],
+    },
+    "pfd_kebocoran": {
+        "label": "Diagram Proses — Kebocoran NaOH",
+        "tags": ["naoh", "soda-mati", "kaustisasi", "pfd"],
+    },
+    "pfd_karbon": {
+        "label": "Diagram Proses — Jalur Karbon",
+        "tags": ["ccus", "redmud", "karbon"],
+    },
+}
+
+
+def known_tags() -> list[str]:
+    """Semua tag yang dikenali chart — rekomendasi utk penulis dokumen."""
+    out: set[str] = set()
+    for spec in CHART_TAGS.values():
+        out.update(spec["tags"])
+    return sorted(out)
+
+
+def charts_for_doc(doc: dict) -> list[str]:
+    """Label chart yang AKAN memakai dokumen ini (irisan tag) — lentur,
+    berubah otomatis saat tag dokumen diubah."""
+    dtags = {t.lower() for t in doc.get("tags", [])}
+    return [spec["label"] for spec in CHART_TAGS.values()
+            if dtags & {t.lower() for t in spec["tags"]}]
+
 
 def load_all() -> list[dict]:
     """Semua dokumen: [{name, tags, status, body}] — dibaca segar tiap panggilan

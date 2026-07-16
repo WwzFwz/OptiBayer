@@ -27,7 +27,7 @@ from plotly.subplots import make_subplots
 from app import ui
 from src import capability, schema
 from src.models import predict as mpredict
-from src.advisory import providers
+from src.advisory import knowledge, providers
 from src.optimize import regret
 from src.physics import na_balance
 
@@ -351,7 +351,7 @@ def _regret_handover_section(df: pd.DataFrame, seq: pd.DataFrame, hour: int) -> 
                     title="Recovery: aktual vs counterfactual (area = regret)",
                 )
                 st.plotly_chart(fig_cf, width="stretch", key="ov_regret_chart")
-            ui.explain_chart("regret", "Regret Meter (counterfactual 8 jam)", tags=["regret", "advisory", "presipitasi"], context={
+            ui.explain_chart("regret", "Regret Meter (counterfactual 8 jam)", tags=knowledge.CHART_TAGS["regret"]["tags"], context={
                 "aktual": rg["actual"],
                 "seandainya_advisory_diikuti": rg["counterfactual"],
                 "selisih": rg["delta"],
