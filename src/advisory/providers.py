@@ -102,7 +102,38 @@ def _gemini(prompt: str, system: str) -> str:
     return r.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 
-_BACKENDS = {"ollama": _ollama, "groq": _groq, "gemini": _gemini}
+def _openai_compat(prompt: str, system: str) -> str:
+    """Backend generik utk endpoint OpenAI-compatible — jalur deploy Qwen
+    via cloud (OpenRouter, DashScope/Alibaba, vLLM, LM Studio, dll).
+
+    Env: OPENAI_BASE_URL (mis. https://openrouter.ai/api/v1 atau
+    https://dashscope-intl.aliyuncs.com/compatible-mode/v1),
+    OPENAI_API_KEY, OPENAI_MODEL (mis. qwen/qwen-2.5-7b-instruct:free
+    di OpenRouter, atau qwen2.5-7b-instruct di DashScope).
+    """
+    import requests
+
+    base = os.environ["OPENAI_BASE_URL"].rstrip("/")
+    r = requests.post(
+        f"{base}/chat/completions",
+        headers={"Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}"},
+        json={
+            "model": os.environ.get("OPENAI_MODEL", "qwen2.5-7b-instruct"),
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.2,
+            "max_tokens": 500,
+        },
+        timeout=60,
+    )
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"]
+
+
+_BACKENDS = {"ollama": _ollama, "groq": _groq, "gemini": _gemini,
+             "openai": _openai_compat}
 
 
 def provider_name() -> str:

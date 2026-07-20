@@ -36,7 +36,7 @@ langkah lain.
 |---|---|---|
 | **App tidur** setelah ±12 jam tanpa pengunjung | Juri klik link → menunggu cold-boot ±2 menit | Buka URL-nya 15 menit SEBELUM presentasi |
 | RAM 1 GB | Cukup utk app kita (train 1000 baris ±30 dtk) — jangan tambah dependensi berat | Uji setelah tiap deploy |
-| Ollama TIDAK jalan di cloud | Backend lokal hanya utk laptop | Di cloud pakai `groq`/`gemini`/`template` |
+| Ollama TIDAK jalan di cloud | Backend lokal hanya utk laptop | Di cloud pakai `groq`/`gemini`/`template` — atau tetap Qwen via backend `openai` (OpenRouter/DashScope, lihat `.env.example`); isi OPENAI_* di Secrets |
 | Repo private butuh otorisasi | Deploy gagal diam-diam | Cek permission GitHub saat setup |
 | File besar memperlambat boot | zip/xlsm root sudah di-.gitignore ✔ | Jangan commit dataset raksasa ke main |
 
