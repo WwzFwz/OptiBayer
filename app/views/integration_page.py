@@ -93,7 +93,8 @@ def render() -> None:
         st.json(result, expanded=2)
 
     st.caption(
-        "Catatan: wrapper REST (Flask) & MCP server mengiterasi kontrak yang "
-        "sama (`src/integration/contract.py`) — implementasinya PASCA-demo "
-        "(catatan dependensi starlette/fastapi di doc 07)."
+        "REST API-nya SUDAH tersedia (FastAPI, satu kontrak dengan halaman "
+        "ini): `python -m uvicorn src.integration.api:app --port 8000` → "
+        "docs OpenAPI di http://localhost:8000/docs. MCP server menyusul, "
+        "mengiterasi kontrak yang sama."
     )

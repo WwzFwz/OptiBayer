@@ -65,9 +65,13 @@ bisa konsumsi; OpenAPI schema gratis untuk tim IT ANTAM.
 
 Lintas-endpoint: API-key/AD auth, versioning `/v1`, read-only (menulis
 setpoint ke DCS TIDAK lewat sini — itu fase 3 dengan jalurnya sendiri).
-⚠ Catatan dependensi saat ini: streamlit terbaru memaksa `starlette 1.3`
-yang bentrok pin `fastapi 0.115` — implementasi memakai **Flask** (bebas
-starlette) atau fastapi versi baru; JANGAN dipasang mendekati demo.
+
+✅ **STATUS: TERIMPLEMENTASI** (`src/integration/api.py`, FastAPI 0.139 —
+konflik starlette lama selesai dgn upgrade, Streamlit tidak terganggu).
+Jalankan: `python -m uvicorn src.integration.api:app --port 8000` →
+docs OpenAPI otomatis di `/docs`. Model di-warm-up saat boot (predict
+~6 ms, mass-balance ~3 ms). Plus rute `/v1/replay/*` untuk frontend
+Next.js (KPI + kartu advisory per jam).
 
 ### Tier 2 — Event/stream untuk data pabrik (pertukaran data industri)
 

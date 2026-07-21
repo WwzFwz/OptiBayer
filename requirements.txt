@@ -10,3 +10,5 @@ streamlit
 joblib
 requests
 python-dotenv
+fastapi
+uvicorn
