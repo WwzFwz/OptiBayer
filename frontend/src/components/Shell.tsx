@@ -6,8 +6,16 @@ import { CircleAlert, Wifi, WifiOff } from "lucide-react";
 import Advisory from "./Advisory";
 import ControlPanel from "./ControlPanel";
 import Kpi from "./Kpi";
-import Rail, { PageId, PAGES } from "./Rail";
+import Rail, { PageId } from "./Rail";
 import Overview from "./pages/Overview";
+import Diagram from "./pages/Diagram";
+import Digesti from "./pages/Digesti";
+import Liquor from "./pages/Liquor";
+import Presipitasi from "./pages/Presipitasi";
+import RedMud from "./pages/RedMud";
+import Lab from "./pages/Lab";
+import Knowledge from "./pages/Knowledge";
+import Integrasi from "./pages/Integrasi";
 import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
 
@@ -63,11 +71,15 @@ export default function Shell() {
           <main className="min-w-0 flex-1 space-y-3 overflow-y-auto p-4">
             {monitoring && <Kpi />}
             {monitoring && s.dock === "top" && <Advisory setPage={setPage} />}
-            {page === "overview" ? (
-              <Overview />
-            ) : (
-              <Placeholder page={page} />
-            )}
+            {page === "overview" && <Overview />}
+            {page === "diagram" && <Diagram />}
+            {page === "digesti" && <Digesti />}
+            {page === "liquor" && <Liquor />}
+            {page === "presipitasi" && <Presipitasi />}
+            {page === "redmud" && <RedMud />}
+            {page === "lab" && <Lab />}
+            {page === "knowledge" && <Knowledge />}
+            {page === "integrasi" && <Integrasi />}
           </main>
           {monitoring && s.dock === "right" && (
             <aside className="w-[340px] shrink-0 overflow-y-auto p-3"
@@ -81,18 +93,3 @@ export default function Shell() {
   );
 }
 
-function Placeholder({ page }: { page: PageId }) {
-  const label = PAGES.find((p) => p.id === page)?.label ?? page;
-  return (
-    <div className="grid h-64 place-items-center rounded-xl"
-         style={{ background: C.surface, border: `1px dashed ${C.grid}` }}>
-      <div className="text-center">
-        <p className="mb-1 font-semibold" style={{ color: C.ink }}>{label}</p>
-        <p className="text-sm" style={{ color: C.muted }}>
-          Porting menyusul — versi lengkap halaman ini tersedia di Streamlit
-          (http://localhost:8501). Inti & API-nya sama.
-        </p>
-      </div>
-    </div>
-  );
-}

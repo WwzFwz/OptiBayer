@@ -118,6 +118,102 @@ def replay_sequence(scenario_id: int) -> dict:
     }
 
 
+@app.get("/v1/operating-map", tags=["frontend"],
+         summary="Grid recovery = f(suhu digester × NaOH) utk heatmap Digesti")
+def operating_map(scenario_id: int, hour: int, n: int = 20) -> dict:
+    import numpy as np
+    import pandas as pd
+
+    from src import schema
+    from src.models import predict
+
+    seq = _sequence(scenario_id)
+    row = seq.iloc[max(0, min(hour, len(seq) - 1))]
+    comp = predict.composition_of(row)
+    knobs = predict.knobs_of(row)
+    tb = schema.SAFE_BOUNDS["digester_temp_c"]
+    nb_ = schema.SAFE_BOUNDS["naoh_conc_gl"]
+    temps = np.linspace(*tb, n)
+    naohs = np.linspace(*nb_, n)
+    tt, nn = np.meshgrid(temps, naohs)
+    kdf = pd.DataFrame({
+        "particle_size_um": knobs["particle_size_um"],
+        "digester_temp_c": tt.ravel(),
+        "naoh_conc_gl": nn.ravel(),
+        "precip_temp_c": knobs["precip_temp_c"],
+        "seed_ratio": knobs["seed_ratio"],
+    })
+    z = predict.predict_frame(predict.frame(comp, kdf))["recovery_pct"]
+    return {
+        "temps": [round(float(t), 1) for t in temps],
+        "naohs": [round(float(x), 0) for x in naohs],
+        "z": z.round(2).values.reshape(n, n).tolist(),
+        "now": {"t": round(knobs["digester_temp_c"], 1),
+                "naoh": round(knobs["naoh_conc_gl"], 0)},
+    }
+
+
+@app.get("/v1/pareto", tags=["frontend"],
+         summary="Pareto NSGA-II utk komposisi jam tertentu (+ radar knob)")
+def pareto_hour(scenario_id: int, hour: int) -> dict:
+    from src import schema
+    from src.models import predict
+    from src.optimize import pareto
+
+    seq = _sequence(scenario_id)
+    row = seq.iloc[max(0, min(hour, len(seq) - 1))]
+    comp = predict.composition_of(row)
+    knobs = predict.knobs_of(row)
+    pf = pareto.pareto(comp)
+    picked = pareto.pick(pf)
+    cols = list(schema.KNOBS) + ["recovery_pct", "net_opex", "red_mud_t"]
+    return {
+        "solutions": pf[cols].round(3).to_dict(orient="records"),
+        "picked": {k: round(float(picked[k]), 3) for k in cols},
+        "bounds": {k: schema.SAFE_BOUNDS[k] for k in schema.KNOBS},
+        "now_knobs": {k: round(v, 3) for k, v in knobs.items()},
+        "labels": {k: schema.label(k) for k in schema.KNOBS},
+    }
+
+
+@app.get("/v1/ceq", tags=["frontend"],
+         summary="Kurva Ceq presipitasi (korelasi Misra) + gap supersaturasi")
+def ceq_curve(a_gl: float = 130.0, caustic_gl: float = 150.0,
+              t_now: float = 60.0) -> dict:
+    from src.physics import precipitation
+
+    temps, ceqs = precipitation.ceq_curve(caustic_gl)
+    return {
+        "temps": [round(float(t), 1) for t in temps],
+        "ceq": [round(float(c), 2) for c in ceqs],
+        "a_gl": a_gl,
+        "t_now": t_now,
+        "ceq_now": round(float(precipitation.ceq(t_now, caustic_gl)), 2),
+        "gap": round(precipitation.supersaturation_gap(a_gl, t_now, caustic_gl), 2),
+    }
+
+
+@app.get("/v1/knowledge", tags=["frontend"],
+         summary="Daftar dokumen Knowledge Pack + chart pemakainya")
+def knowledge_list() -> dict:
+    from src.advisory import knowledge
+
+    docs = knowledge.load_all()
+    return {
+        "docs": [{
+            "name": d["name"], "tags": d["tags"], "status": d["status"],
+            "body": d["body"], "used_by": knowledge.charts_for_doc(d),
+        } for d in docs],
+        "charts": {k: v["label"] for k, v in knowledge.CHART_TAGS.items()},
+    }
+
+
+@app.get("/v1/integration/contract", tags=["frontend"],
+         summary="Kontrak integrasi (endpoint + MCP tools + MQTT)")
+def integration_contract() -> dict:
+    return contract.spec_export()
+
+
 @app.get("/v1/replay/{scenario_id}/hour/{hour}", tags=["frontend"],
          summary="Kondisi satu jam: KPI + kartu advisory (+ konteks penuh)")
 def replay_hour(scenario_id: int, hour: int, fast: bool = True) -> dict:

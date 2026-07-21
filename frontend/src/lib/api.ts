@@ -52,3 +52,45 @@ export const getHour = (s: number, hour: number, fast = true) =>
   get<HourData>(`/v1/replay/${s}/hour/${hour}?fast=${fast}`);
 
 export const getHealth = () => get<{ ok: boolean }>("/v1/health");
+
+export type OperatingMap = {
+  temps: number[]; naohs: number[]; z: number[][];
+  now: { t: number; naoh: number };
+};
+export const getOperatingMap = (s: number, hour: number) =>
+  get<OperatingMap>(`/v1/operating-map?scenario_id=${s}&hour=${hour}`);
+
+export type ParetoData = {
+  solutions: Array<Record<string, number>>;
+  picked: Record<string, number>;
+  bounds: Record<string, [number, number]>;
+  now_knobs: Record<string, number>;
+  labels: Record<string, string>;
+};
+export const getPareto = (s: number, hour: number) =>
+  get<ParetoData>(`/v1/pareto?scenario_id=${s}&hour=${hour}`);
+
+export type CeqData = {
+  temps: number[]; ceq: number[]; a_gl: number;
+  t_now: number; ceq_now: number; gap: number;
+};
+export const getCeq = (a: number, caustic: number, t: number) =>
+  get<CeqData>(`/v1/ceq?a_gl=${a}&caustic_gl=${caustic}&t_now=${t}`);
+
+export type KnowledgeDoc = {
+  name: string; tags: string[]; status: string; body: string; used_by: string[];
+};
+export const getKnowledge = () =>
+  get<{ docs: KnowledgeDoc[]; charts: Record<string, string> }>("/v1/knowledge");
+
+export const getContract = () =>
+  get<Record<string, unknown>>("/v1/integration/contract");
+
+export async function postOp(op: string, payload: unknown) {
+  const r = await fetch(`${API}/v1/${op}`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error(`API ${op}: ${r.status}`);
+  return r.json();
+}
