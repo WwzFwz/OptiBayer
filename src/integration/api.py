@@ -214,6 +214,54 @@ def integration_contract() -> dict:
     return contract.spec_export()
 
 
+@app.get("/v1/regret", tags=["frontend"],
+         summary="Regret meter 8 jam: aktual vs counterfactual + deret + handover")
+def regret_window(scenario_id: int, hour: int) -> dict:
+    from src.advisory import providers
+    from src.optimize import regret
+
+    seq = _sequence(scenario_id)
+    lo = max(0, hour - 7)
+    window = seq.iloc[lo:hour + 1]
+    rg = regret.shift_regret(window)
+    series = regret.shift_series(window)
+    co2 = float(window["red_mud_t"].sum() * 0.023)
+    stats = {
+        "hour_start": int(lo), "hour_end": int(hour),
+        "recovery_mean": float(window["recovery_pct"].mean()),
+        "opex_sum": float(window["total_opex"].sum()),
+        "red_mud_sum": float(window["red_mud_t"].sum()),
+        "co2_t": co2,
+        "silika_last": float(window["reactive_sio2_pct"].iloc[-1]),
+        "silika_trend": ("naik" if window["reactive_sio2_pct"].iloc[-1]
+                         > window["reactive_sio2_pct"].iloc[0] else "turun/stabil"),
+        "n_advisories": 0, "n_critical": 0,
+    }
+    report, backend = providers.handover_report(stats)
+    return {
+        "actual": rg["actual"],
+        "counterfactual": rg["counterfactual"],
+        "delta": rg["delta"],
+        "series": series.round(3).to_dict(orient="records"),
+        "handover": report,
+        "handover_backend": backend,
+    }
+
+
+@app.post("/v1/explain", tags=["frontend"],
+          summary="Analisis AI satu chart (grounded + knowledge ber-sitasi)")
+def explain(payload: dict = Body(...)) -> dict:
+    from src.advisory import providers
+
+    text, backend = providers.explain_chart(
+        payload.get("title", "Chart"),
+        payload.get("context", {}),
+        payload.get("question", ""),
+        payload.get("tags"),
+    )
+    return {"text": text, "backend": backend}
+
+
 @app.get("/v1/replay/{scenario_id}/hour/{hour}", tags=["frontend"],
          summary="Kondisi satu jam: KPI + kartu advisory (+ konteks penuh)")
 def replay_hour(scenario_id: int, hour: int, fast: bool = True) -> dict:

@@ -1,6 +1,7 @@
 "use client";
 // Liquor Loop — Sankey natrium: ke mana NaOH bocor.
 import Sankey, { Flow, Node } from "@/components/Sankey";
+import ExplainAI from "@/components/ExplainAI";
 import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
 
@@ -39,6 +40,11 @@ export default function Liquor() {
           Sankey Natrium — ke mana uang NaOH mengalir (ton/jam)
         </p>
         <Sankey nodes={nodes} flows={flows} />
+        <ExplainAI title="Sankey Natrium (kebocoran NaOH)"
+          tags={["naoh", "liquor", "sankey_na", "kaustisasi", "soda-mati"]}
+          context={{ makeup_t: nb.makeup_t, dsp_loss_t: nb.dsp_loss_t,
+            dead_soda_net_t: nb.dead_soda_net_t, physical_loss_t: nb.physical_loss_t,
+            total_loss_t: totalLoss }} />
       </div>
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Stat label="Total kebocoran NaOH" val={`${totalLoss.toFixed(1)} t`} />

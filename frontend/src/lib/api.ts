@@ -86,6 +86,28 @@ export const getKnowledge = () =>
 export const getContract = () =>
   get<Record<string, unknown>>("/v1/integration/contract");
 
+export type RegretData = {
+  actual: Record<string, number>;
+  counterfactual: Record<string, number>;
+  delta: Record<string, number>;
+  series: Array<{ sim_hour: number; actual: number; counterfactual: number }>;
+  handover: string;
+  handover_backend: string;
+};
+export const getRegret = (s: number, hour: number) =>
+  get<RegretData>(`/v1/regret?scenario_id=${s}&hour=${hour}`);
+
+export async function explainChart(
+  title: string, context: unknown, question = "", tags?: string[],
+): Promise<{ text: string; backend: string }> {
+  const r = await fetch(`${API}/v1/explain`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, context, question, tags }),
+  });
+  if (!r.ok) throw new Error(`explain: ${r.status}`);
+  return r.json();
+}
+
 export async function postOp(op: string, payload: unknown) {
   const r = await fetch(`${API}/v1/${op}`, {
     method: "POST", headers: { "Content-Type": "application/json" },

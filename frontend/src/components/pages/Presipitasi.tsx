@@ -5,6 +5,7 @@ import {
   Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { CeqData, getCeq } from "@/lib/api";
+import ExplainAI from "@/components/ExplainAI";
 import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
 
@@ -57,6 +58,10 @@ export default function Presipitasi() {
                   dot={false} name="Ceq" isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
+        {ceq && <ExplainAI title="Kurva Ceq — Gap Supersaturasi"
+          tags={["presipitasi", "yield", "seed", "suhu"]}
+          context={{ alumina_terlarut_gl: ceq.a_gl, ceq_pada_operasi_gl: ceq.ceq_now,
+            gap_supersaturasi_gl: ceq.gap }} />}
       </div>
     </div>
   );

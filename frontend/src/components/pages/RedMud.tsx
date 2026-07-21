@@ -1,6 +1,7 @@
 "use client";
 // Red Mud & CCUS — panel karbonasi (kalkulator paper 2026).
 import { useState } from "react";
+import ExplainAI from "@/components/ExplainAI";
 import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
 
@@ -44,6 +45,10 @@ export default function RedMud() {
           Permen LHK No. 6/2021 (pH 7–10), membuka jalur backfill / produk sirkular
           alih-alih landfill.
         </p>
+        <ExplainAI title="Karbonasi CCUS Red Mud"
+          tags={["ccus", "redmud", "karbon", "tailing", "esg"]}
+          context={{ red_mud_t: rm, co2_tersekuestrasi_t: co2,
+            nilai_karbon_rp: value, harga_karbon_rp_per_t: price }} />
       </div>
     </div>
   );

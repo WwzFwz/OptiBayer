@@ -6,6 +6,8 @@ import {
   ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, Cell,
 } from "recharts";
 import { getOperatingMap, getPareto, OperatingMap, ParetoData } from "@/lib/api";
+import ParallelCoords, { Dim } from "@/components/ParallelCoords";
+import ExplainAI from "@/components/ExplainAI";
 import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
 
@@ -130,8 +132,28 @@ export default function Digesti() {
                 <Tooltip contentStyle={{ background: C.page, border: `1px solid ${C.grid}`, borderRadius: 8 }} />
               </RadarChart>
             </ResponsiveContainer>
+            {/* Parallel coordinates — eksplorasi trade-off multi-dimensi */}
+            <div className="lg:col-span-2">
+              <p className="mb-1 text-xs font-semibold" style={{ color: C.ink2 }}>
+                Parallel Coordinates — tiap garis = satu solusi Pareto (hover untuk sorot)
+              </p>
+              <ParallelCoords colorKey="recovery_pct" rows={pf.solutions}
+                dims={([
+                  ...Object.keys(pf.labels).map((k) => ({ key: k, label: pf.labels[k].split(" ")[0] })),
+                  { key: "recovery_pct", label: "Recovery" },
+                  { key: "net_opex", label: "Net OPEX" },
+                  { key: "red_mud_t", label: "Red Mud" },
+                ] as Dim[])} />
+            </div>
           </div>
         )}
+        <ExplainAI title="Peta Operasi Digesti"
+          tags={["silika", "digesti", "opmap", "advisory"]}
+          context={{
+            posisi_sekarang: map?.now,
+            rekomendasi: pf?.picked,
+            recovery_range: map ? [zmin, zmax] : undefined,
+          }} />
       </div>
     </div>
   );

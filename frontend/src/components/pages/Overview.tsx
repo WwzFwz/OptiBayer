@@ -1,9 +1,12 @@
 "use client";
-// Overview — 4 tren + pita alarm + penanda jam aktif (port dari Streamlit).
+// Overview — 4 tren + pita alarm + regret meter + handover + Analisis AI.
+import { useState } from "react";
 import {
-  Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer,
-  Tooltip, XAxis, YAxis,
+  Area, Line, LineChart, ComposedChart, ReferenceArea, ReferenceLine,
+  ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
+import { getRegret, RegretData } from "@/lib/api";
+import ExplainAI from "@/components/ExplainAI";
 import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
 
@@ -15,12 +18,20 @@ const CHARTS = [
 ] as const;
 
 export default function Overview() {
-  const { seq, hour, setHour } = useStore();
-  if (!seq) return <p style={{ color: C.muted }}>Memuat deret replay…</p>;
+  const { seq, hour, setHour, scenario, hourData } = useStore();
+  const [rg, setRg] = useState<RegretData | null>(null);
+  const [busy, setBusy] = useState(false);
 
+  if (!seq) return <p style={{ color: C.muted }}>Memuat deret replay…</p>;
   const data = seq.hours.map((h, i) => ({ jam: i, ...h }));
 
+  async function runRegret() {
+    setBusy(true);
+    try { setRg(await getRegret(scenario, hour)); } finally { setBusy(false); }
+  }
+
   return (
+    <div className="space-y-3">
     <div className="grid gap-3 lg:grid-cols-2">
       {CHARTS.map(({ key, title, color, band }) => (
         <div key={key} className="rounded-xl p-3"
@@ -54,6 +65,86 @@ export default function Overview() {
         Pita transparan = zona operasi aman · garis putus-putus = jam aktif ·
         klik pada chart untuk melompat ke jam tersebut.
       </p>
+    </div>
+
+    {/* Analisis AI untuk kondisi jam aktif */}
+    {hourData && (
+      <ExplainAI title="Kondisi Operasi (jam aktif)"
+        tags={["silika", "digesti", "advisory"]}
+        context={{
+          silika_reaktif_pct: hourData.kpi.reactive_sio2_pct,
+          recovery_pct: hourData.kpi.recovery_pct,
+          total_opex: hourData.kpi.total_opex,
+          red_mud_t: hourData.kpi.red_mud_t,
+          silika_level: hourData.silika_level,
+          rekomendasi: hourData.recommended_knobs,
+          delta_jika_diikuti: hourData.delta_if_followed,
+        }} />
+    )}
+
+    {/* Regret meter + counterfactual + handover */}
+    <div className="rounded-xl p-3" style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-sm font-semibold" style={{ color: C.ink }}>
+          Regret Meter — nilai yang tertinggal (8 jam terakhir)
+        </p>
+        <button onClick={runRegret} disabled={busy}
+          className="rounded px-3 py-1.5 text-sm font-semibold"
+          style={{ background: C.series[0], color: "#fff", opacity: busy ? 0.6 : 1 }}>
+          {busy ? "Menghitung…" : "Hitung Regret + Laporan"}
+        </button>
+      </div>
+      {!rg ? (
+        <p className="text-sm" style={{ color: C.muted }}>
+          Counterfactual: seandainya setpoint 8 jam terakhir mengikuti advisory —
+          berapa recovery/OPEX yang tidak hilang.
+        </p>
+      ) : (
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div>
+            <div className="grid grid-cols-3 gap-2">
+              <Metric label="Δ Recovery" val={`${rg.delta.recovery_pct >= 0 ? "+" : ""}${rg.delta.recovery_pct.toFixed(2)}%`} good={rg.delta.recovery_pct > 0} />
+              <Metric label="Δ OPEX (8 jam)" val={`${rg.delta.total_opex >= 0 ? "+" : ""}${rg.delta.total_opex.toLocaleString("id-ID", { maximumFractionDigits: 0 })}`} good={rg.delta.total_opex < 0} />
+              <Metric label="Δ Red Mud" val={`${rg.delta.red_mud_t >= 0 ? "+" : ""}${rg.delta.red_mud_t.toFixed(1)} t`} good={rg.delta.red_mud_t < 0} />
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <ComposedChart data={rg.series}>
+                <XAxis dataKey="sim_hour" stroke={C.muted} fontSize={11} />
+                <YAxis stroke={C.muted} fontSize={11} domain={["auto", "auto"]} />
+                <Tooltip contentStyle={{ background: C.page, border: `1px solid ${C.grid}`, borderRadius: 8 }} />
+                <Area type="monotone" dataKey="counterfactual" stroke={C.status.good}
+                      strokeDasharray="5 3" fill={C.status.good} fillOpacity={0.14}
+                      name="Jika advisory diikuti" isAnimationActive={false} />
+                <Line type="monotone" dataKey="actual" stroke={C.series[0]}
+                      strokeWidth={2} dot={false} name="Aktual" isAnimationActive={false} />
+              </ComposedChart>
+            </ResponsiveContainer>
+            <p className="text-xs" style={{ color: C.muted }}>
+              Area di antara dua garis = regret (nilai yang tertinggal).
+            </p>
+          </div>
+          <div>
+            <p className="mb-1 text-sm font-semibold" style={{ color: C.ink }}>
+              Laporan Serah Terima Shift
+            </p>
+            <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded p-2 text-xs"
+                 style={{ background: C.page, color: C.ink2, border: `1px solid ${C.grid}` }}>
+              {rg.handover}
+            </pre>
+            <p className="mt-1 text-xs" style={{ color: C.muted }}>backend: {rg.handover_backend}</p>
+          </div>
+        </div>
+      )}
+    </div>
+    </div>
+  );
+}
+
+function Metric({ label, val, good }: { label: string; val: string; good: boolean }) {
+  return (
+    <div className="rounded-lg p-2 text-center" style={{ background: C.page, border: `1px solid ${C.grid}` }}>
+      <p className="text-xs" style={{ color: C.muted }}>{label}</p>
+      <p className="text-base font-bold" style={{ color: good ? C.status.good : C.status.critical }}>{val}</p>
     </div>
   );
 }

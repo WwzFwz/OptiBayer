@@ -40,6 +40,19 @@ def best_for_row(row: pd.Series, w_recovery: float = 0.6,
     return cand.loc[i].to_dict(), pred.loc[i].to_dict()
 
 
+def shift_series(shift_df: pd.DataFrame) -> pd.DataFrame:
+    """Per-baris: recovery aktual vs counterfactual (untuk chart overlay regret)."""
+    rows = []
+    for idx, r in shift_df.iterrows():
+        _, best = best_for_row(r)
+        rows.append({
+            "sim_hour": int(idx),
+            "actual": float(r["recovery_pct"]),
+            "counterfactual": float(best["recovery_pct"]),
+        })
+    return pd.DataFrame(rows)
+
+
 def shift_regret(shift_df: pd.DataFrame) -> dict:
     """Counterfactual satu shift: aktual vs seandainya advisory diikuti."""
     actual = {
