@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+:root { color-scheme: dark; }
+
+body {
+  background: #0d0d0d;
+  color: #ffffff;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #2c2c2a; border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+input[type="range"] { accent-color: #3987e5; }
