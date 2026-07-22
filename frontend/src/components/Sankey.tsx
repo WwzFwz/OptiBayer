@@ -10,23 +10,34 @@ export default function Sankey({ nodes, flows, height = 320 }: {
   nodes: Node[]; flows: Flow[]; height?: number;
 }) {
   const cols = Math.max(...nodes.map((n) => n.col)) + 1;
-  const W = 900;
-  const colX = (c: number) => 60 + (c * (W - 200)) / (cols - 1 || 1);
+  const W = 1180;
+  // beri margin kanan lebih besar utk label node terminal
+  const colX = (c: number) => 40 + (c * (W - 240)) / (cols - 1 || 1);
   // total nilai per node utk tinggi
   const nodeVal: Record<string, number> = {};
   for (const f of flows) {
     nodeVal[f.from] = (nodeVal[f.from] ?? 0) + f.value;
     nodeVal[f.to] = (nodeVal[f.to] ?? 0) + f.value;
   }
-  const maxV = Math.max(...Object.values(nodeVal), 1);
-  const scale = (height - 40) / maxV;
+  // skala: kolom terpadat (jumlah nilai node + gap) mengisi ~85% tinggi
+  const colSum: Record<number, number> = {};
+  const colCount: Record<number, number> = {};
+  for (const n of nodes) {
+    colSum[n.col] = (colSum[n.col] ?? 0) + (nodeVal[n.id] ?? 0);
+    colCount[n.col] = (colCount[n.col] ?? 0) + 1;
+  }
+  let scale = 1;
+  for (const c of Object.keys(colSum).map(Number)) {
+    const avail = (height - 40) * 0.85 - colCount[c] * 12;
+    scale = Math.min(scale, avail / Math.max(colSum[c], 1));
+  }
   // posisi Y per node (tumpuk dalam kolom)
   const colStack: Record<number, number> = {};
   const pos: Record<string, { x: number; y: number; h: number }> = {};
   for (const n of nodes) {
-    const h = Math.max((nodeVal[n.id] ?? 0) * scale * 0.5, 14);
+    const h = Math.max((nodeVal[n.id] ?? 0) * scale, 16);
     const y = 20 + (colStack[n.col] ?? 0);
-    colStack[n.col] = (colStack[n.col] ?? 0) + h + 10;
+    colStack[n.col] = (colStack[n.col] ?? 0) + h + 12;
     pos[n.id] = { x: colX(n.col), y, h };
   }
   // offset link per node
@@ -38,7 +49,7 @@ export default function Sankey({ nodes, flows, height = 320 }: {
       {flows.map((f, i) => {
         const s = pos[f.from], t = pos[f.to];
         if (!s || !t) return null;
-        const w = Math.max(f.value * scale * 0.5, 2);
+        const w = Math.max(f.value * scale, 2);
         const sy = s.y + (outOff[f.from] ?? 0) + w / 2;
         const ty = t.y + (inOff[f.to] ?? 0) + w / 2;
         outOff[f.from] = (outOff[f.from] ?? 0) + w;

@@ -7,8 +7,28 @@ import {
 } from "recharts";
 import { getRegret, RegretData } from "@/lib/api";
 import ExplainAI from "@/components/ExplainAI";
+import HexRadar, { grade, HexMetric } from "@/components/HexRadar";
 import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
+
+// normalisasi tiap KPI ke 0..1 searah "baik = penuh" (clamp ke rentang wajar)
+function healthMetrics(kpi: Record<string, number>): HexMetric[] {
+  const norm = (v: number, lo: number, hi: number, invert = false) => {
+    const t = Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+    return invert ? 1 - t : t;
+  };
+  const rows: Array<[string, number]> = [
+    ["Recovery", norm(kpi.recovery_pct, 80, 97)],
+    ["Efisiensi Biaya", norm(kpi.total_opex, 15000, 45000, true)],
+    ["Silika Bersih", norm(kpi.reactive_sio2_pct, 2, 8, true)],
+    ["Minim Red Mud", norm(kpi.red_mud_t, 240, 640, true)],
+    ["Potensi CO₂", norm(kpi.co2_capture_t, 5, 16)],
+    ["Yield", norm(kpi.precip_yield_pct, 72, 82)],
+  ];
+  return rows.map(([label, n]) => ({
+    label, value: n, norm: n, grade: grade(n),
+  }));
+}
 
 const CHARTS = [
   { key: "recovery_pct", title: "Recovery Al (%)", color: C.series[0], band: [85, 100] },
@@ -30,8 +50,45 @@ export default function Overview() {
     try { setRg(await getRegret(scenario, hour)); } finally { setBusy(false); }
   }
 
+  const health = hourData ? healthMetrics(hourData.kpi as Record<string, number>) : null;
+  const avgGrade = health
+    ? (health.reduce((a, m) => a + m.norm, 0) / health.length) : 0;
+
   return (
     <div className="space-y-3">
+    {/* Profil Kesehatan Pabrik — hexagon radar */}
+    {health && (
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="rounded-xl p-3" style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
+          <p className="mb-1 text-sm font-semibold" style={{ color: C.ink }}>
+            Profil Kesehatan Pabrik
+          </p>
+          <p className="mb-2 text-xs" style={{ color: C.muted }}>
+            Skor jam ini · <b style={{ color: "#e6c063" }}>{grade(avgGrade)}</b> —
+            makin penuh & seimbang segi enamnya, makin sehat.
+          </p>
+          <HexRadar metrics={health} />
+        </div>
+        <div className="lg:col-span-2 grid grid-cols-2 gap-2 md:grid-cols-3">
+          {health.map((m) => (
+            <div key={m.label} className="flex flex-col justify-center rounded-lg p-3"
+                 style={{ background: C.page, border: `1px solid ${C.grid}` }}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: C.muted }}>{m.label}</span>
+                <span className="grid h-6 w-6 place-items-center rounded-full text-xs font-extrabold"
+                      style={{ background: "#2a1f12", color: "#e6c063",
+                               border: "1px solid #c9a24a" }}>{m.grade}</span>
+              </div>
+              <div className="mt-2 h-1.5 w-full rounded-full" style={{ background: C.grid }}>
+                <div className="h-full rounded-full"
+                     style={{ width: `${m.norm * 100}%`, background: "#c9a24a" }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
     <div className="grid gap-3 lg:grid-cols-2">
       {CHARTS.map(({ key, title, color, band }) => (
         <div key={key} className="rounded-xl p-3"

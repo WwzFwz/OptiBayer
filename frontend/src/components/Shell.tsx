@@ -20,8 +20,9 @@ import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
 
 const REPLAY_FREE: PageId[] = ["lab", "knowledge", "integrasi"];
-// advisory PENUH di overview & diagram; RINGKAS di halaman stasiun
-const FULL_ADVISORY: PageId[] = ["overview", "diagram"];
+// advisory PENUH hanya di Overview (pusat monitoring); halaman lain RINGKAS
+// (Diagram sudah punya visual sendiri -> advisory penuh di sana = redundan).
+const FULL_ADVISORY: PageId[] = ["overview"];
 
 export default function Shell() {
   const s = useStore();

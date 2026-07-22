@@ -156,16 +156,16 @@ function AdvisoryCard({ card, decisionKey, setPage }: {
           {decided === "terima" ? "✓ DITERIMA" : "✗ DITOLAK"} — tercatat
         </p>
       ) : (
-        <div className="flex gap-1">
+        <div className="grid grid-cols-3 gap-2">
           <Btn bg={C.status.good} onClick={() => s.decide(decisionKey, "terima")}>
-            <Check size={12} /> Terima
+            <Check size={13} /> Terima
           </Btn>
           <Btn outline={C.status.critical}
                onClick={() => s.decide(decisionKey, "tolak")}>
-            <X size={12} /> Tolak
+            <X size={13} /> Tolak
           </Btn>
           <Btn outline={C.grid} onClick={() => setPage("digesti")}>
-            <Map size={12} /> Peta
+            <Map size={13} /> Peta
           </Btn>
         </div>
       ))}
@@ -178,7 +178,7 @@ function Btn({ children, bg, outline, onClick }: {
 }) {
   return (
     <button onClick={onClick}
-      className="flex items-center gap-1 rounded px-2 py-1 text-xs font-semibold transition-opacity hover:opacity-80"
+      className="flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold transition-opacity hover:opacity-80"
       style={bg
         ? { background: bg, color: "#fff" }
         : { border: `1px solid ${outline}`, color: outline === C.grid ? C.ink2 : outline }}>
