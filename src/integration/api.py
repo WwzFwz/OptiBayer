@@ -119,18 +119,20 @@ def replay_sequence(scenario_id: int) -> dict:
 
 
 @app.get("/v1/operating-map", tags=["frontend"],
-         summary="Grid recovery = f(suhu digester × NaOH) utk heatmap Digesti")
+         summary="Grid recovery = f(suhu digester × NaOH) + marker rekomendasi")
 def operating_map(scenario_id: int, hour: int, n: int = 20) -> dict:
     import numpy as np
     import pandas as pd
 
     from src import schema
     from src.models import predict
+    from src.optimize import pareto
 
     seq = _sequence(scenario_id)
     row = seq.iloc[max(0, min(hour, len(seq) - 1))]
     comp = predict.composition_of(row)
     knobs = predict.knobs_of(row)
+    reco = pareto.pick(pareto.pareto(comp))
     tb = schema.SAFE_BOUNDS["digester_temp_c"]
     nb_ = schema.SAFE_BOUNDS["naoh_conc_gl"]
     temps = np.linspace(*tb, n)
@@ -150,6 +152,8 @@ def operating_map(scenario_id: int, hour: int, n: int = 20) -> dict:
         "z": z.round(2).values.reshape(n, n).tolist(),
         "now": {"t": round(knobs["digester_temp_c"], 1),
                 "naoh": round(knobs["naoh_conc_gl"], 0)},
+        "reco": {"t": round(float(reco["digester_temp_c"]), 1),
+                 "naoh": round(float(reco["naoh_conc_gl"]), 0)},
     }
 
 
@@ -205,6 +209,46 @@ def knowledge_list() -> dict:
             "body": d["body"], "used_by": knowledge.charts_for_doc(d),
         } for d in docs],
         "charts": {k: v["label"] for k, v in knowledge.CHART_TAGS.items()},
+    }
+
+
+@app.post("/v1/sensitivity", tags=["frontend"],
+          summary="Sweep tiap knob + tornado utk komposisi/setpoint manual (Lab)")
+def sensitivity(payload: dict = Body(...)) -> dict:
+    import numpy as np
+    import pandas as pd
+
+    from src import schema
+    from src.models import predict
+
+    comp = payload["composition"]
+    knobs = payload["knobs"]
+    target = payload.get("target", "recovery_pct")
+    n = int(payload.get("n", 21))
+
+    curves: dict[str, list] = {}
+    deltas: dict[str, float] = {}
+    for k in schema.KNOBS:
+        lo, hi = schema.SAFE_BOUNDS[k]
+        xs = np.linspace(lo, hi, n)
+        kdf = pd.DataFrame({kk: np.full(n, knobs[kk]) for kk in schema.KNOBS})
+        kdf[k] = xs
+        ys = predict.predict_frame(predict.frame(comp, kdf))[target]
+        curves[k] = [{"x": round(float(x), 2), "y": round(float(y), 3)}
+                     for x, y in zip(xs, ys)]
+        deltas[k] = round(float(ys.iloc[-1] - ys.iloc[0]), 3)
+
+    # peringatan ekstrapolasi (out-of-domain vs rentang data latih)
+    wb = predict.within_bounds(comp, knobs, target)
+    out_of_bounds = [schema.label(f) for f, ok in wb.items() if not ok]
+
+    return {
+        "target": target,
+        "curves": curves,
+        "deltas": deltas,
+        "current": {k: round(float(knobs[k]), 2) for k in schema.KNOBS},
+        "labels": {k: schema.label(k) for k in schema.KNOBS},
+        "out_of_bounds": out_of_bounds,
     }
 
 

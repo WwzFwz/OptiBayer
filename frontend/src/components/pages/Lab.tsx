@@ -1,7 +1,10 @@
 "use client";
 // Prediction Lab — komposisi & setpoint bebas → ML vs kalkulator fisika.
 import { useState } from "react";
-import { postOp } from "@/lib/api";
+import {
+  Bar, BarChart, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from "recharts";
+import { getSensitivity, postOp, Sensitivity } from "@/lib/api";
 import { C } from "@/lib/theme";
 
 const OXIDES = [
@@ -30,6 +33,7 @@ export default function Lab() {
     Object.fromEntries(KNOBS.map(([k, , v]) => [k, v])));
   const [ml, setMl] = useState<Record<string, number> | null>(null);
   const [phys, setPhys] = useState<Record<string, number> | null>(null);
+  const [sens, setSens] = useState<Sensitivity | null>(null);
   const [busy, setBusy] = useState(false);
 
   const sum9 = Object.values(comp).reduce((a, b) => a + b, 0);
@@ -39,11 +43,12 @@ export default function Lab() {
     setBusy(true);
     const full = { ...comp, others_pct: Math.max(others, 0) };
     try {
-      const [p1, p2] = await Promise.all([
+      const [p1, p2, s] = await Promise.all([
         postOp("predict", { composition: full, knobs }),
         postOp("mass-balance", { composition: full, knobs }),
+        getSensitivity(full, knobs),
       ]);
-      setMl(p1.result); setPhys(p2.result);
+      setMl(p1.result); setPhys(p2.result); setSens(s);
     } finally { setBusy(false); }
   }
 
@@ -78,12 +83,66 @@ export default function Lab() {
         {busy ? "Menghitung…" : "Prediksi (ML vs Fisika)"}
       </button>
 
+      {sens && sens.out_of_bounds.length > 0 && (
+        <div className="rounded-lg p-3 text-sm"
+             style={{ background: "#fab21922", color: C.status.warning, border: `1px solid ${C.status.warning}` }}>
+          ⚠️ <b>Ekstrapolasi</b> — di luar rentang data latih untuk:{" "}
+          {sens.out_of_bounds.join(", ")}. Prediksi ML kurang bisa dipercaya di
+          titik ini; kalkulator fisika tetap berlaku penuh (deterministik).
+        </div>
+      )}
+
       {ml && phys && (
         <div className="rounded-xl p-3" style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
           <div className="grid grid-cols-2 gap-4">
             <Col title="🤖 Model ML (LightGBM)" data={ml} />
             <Col title="🧮 Kalkulator Fisika (Excel)" data={phys} />
           </div>
+        </div>
+      )}
+
+      {sens && (
+        <div className="rounded-xl p-3" style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
+          <p className="mb-2 text-sm font-semibold" style={{ color: C.ink }}>
+            Simulasi What-If Parameter — sensitivitas pada komposisi ini
+          </p>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            {Object.keys(sens.labels).map((k) => (
+              <div key={k}>
+                <p className="mb-1 text-xs" style={{ color: C.ink2 }}>{sens.labels[k].split(" ")[0]}</p>
+                <ResponsiveContainer width="100%" height={90}>
+                  <LineChart data={sens.curves[k]}>
+                    <Line type="monotone" dataKey="y" stroke={C.series[0]} strokeWidth={2}
+                          dot={false} isAnimationActive={false} />
+                    <XAxis dataKey="x" hide /><YAxis hide domain={["auto", "auto"]} />
+                    <Tooltip contentStyle={{ background: C.page, border: `1px solid ${C.grid}`, borderRadius: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ))}
+          </div>
+          <p className="mb-1 mt-3 text-xs font-semibold" style={{ color: C.ink2 }}>
+            Ranking pengaruh (Δ ujung-ke-ujung rentang aman)
+          </p>
+          {(() => {
+            const tornado = Object.keys(sens.deltas)
+              .map((k) => ({ name: sens.labels[k].split(" ")[0], d: sens.deltas[k] }))
+              .sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
+            return (
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart layout="vertical" data={tornado}>
+                  <XAxis type="number" stroke={C.muted} fontSize={11} />
+                  <YAxis type="category" dataKey="name" stroke={C.muted} fontSize={11} width={90} />
+                  <Tooltip contentStyle={{ background: C.page, border: `1px solid ${C.grid}`, borderRadius: 8 }} />
+                  <Bar dataKey="d">
+                    {tornado.map((t, i) => (
+                      <Cell key={i} fill={t.d >= 0 ? C.status.good : C.status.critical} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            );
+          })()}
         </div>
       )}
     </div>

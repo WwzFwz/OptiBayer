@@ -14,13 +14,44 @@ const SEV_LABEL: Record<Severity, string> = {
   info: "INFO", good: "OK",
 };
 
-export default function Advisory({ setPage }: { setPage: (p: PageId) => void }) {
+export default function Advisory({ setPage, compact = false }: {
+  setPage: (p: PageId) => void; compact?: boolean;
+}) {
   const s = useStore();
   const [dragging, setDragging] = useState(false);
   const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
+  const [collapsed, setCollapsed] = useState(true);
   const startPos = useRef<{ x: number; y: number } | null>(null);
 
   const cards = s.hourData?.cards ?? [];
+
+  // di halaman stasiun: ringkas — 1 baris (severity teratas), klik utk buka
+  if (compact) {
+    if (cards.length === 0) return null;
+    const top = cards[0];
+    const sev = C.status[top.severity as Severity] ?? C.status.info;
+    return (
+      <section className="rounded-xl" style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
+        <button onClick={() => setCollapsed(!collapsed)}
+          className="flex w-full items-center gap-2 px-3 py-2 text-left">
+          <span style={{ color: sev, fontSize: "0.7rem" }}>●</span>
+          <span className="text-sm font-semibold" style={{ color: C.ink }}>
+            Advisory ({cards.length})
+          </span>
+          <span className="truncate text-xs" style={{ color: C.muted }}>— {top.title}</span>
+          <span className="ml-auto text-xs" style={{ color: C.muted }}>{collapsed ? "buka ▾" : "tutup ▴"}</span>
+        </button>
+        {!collapsed && (
+          <div className="grid gap-2 p-2 md:grid-cols-2 xl:grid-cols-3">
+            {cards.map((c, i) => (
+              <AdvisoryCard key={`${s.hour}-${i}`} card={c}
+                decisionKey={`${s.scenario}-${s.hour}-${c.title}`} setPage={setPage} />
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  }
 
   function onPointerDown(e: React.PointerEvent) {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);

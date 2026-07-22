@@ -56,7 +56,20 @@ export const getHealth = () => get<{ ok: boolean }>("/v1/health");
 export type OperatingMap = {
   temps: number[]; naohs: number[]; z: number[][];
   now: { t: number; naoh: number };
+  reco: { t: number; naoh: number };
 };
+
+export type Sensitivity = {
+  target: string;
+  curves: Record<string, Array<{ x: number; y: number }>>;
+  deltas: Record<string, number>;
+  current: Record<string, number>;
+  labels: Record<string, string>;
+  out_of_bounds: string[];
+};
+export const getSensitivity = (
+  composition: Record<string, number>, knobs: Record<string, number>,
+) => postOp("sensitivity", { composition, knobs }) as Promise<Sensitivity>;
 export const getOperatingMap = (s: number, hour: number) =>
   get<OperatingMap>(`/v1/operating-map?scenario_id=${s}&hour=${hour}`);
 

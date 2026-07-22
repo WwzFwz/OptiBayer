@@ -60,22 +60,37 @@ export default function Digesti() {
                         fill={blue((v - zmin) / (zmax - zmin || 1))} />
                 ))
               )}
-              {/* marker posisi sekarang */}
+              {/* marker posisi sekarang (✕) & rekomendasi (★) */}
               {(() => {
-                const ci = map.temps.reduce((best, t, i) =>
-                  Math.abs(t - map.now.t) < Math.abs(map.temps[best] - map.now.t) ? i : best, 0);
-                const ri = map.naohs.reduce((best, x, i) =>
-                  Math.abs(x - map.now.naoh) < Math.abs(map.naohs[best] - map.now.naoh) ? i : best, 0);
-                return <text x={ci * 26 + 62} y={(map.naohs.length - 1 - ri) * 20 + 22}
-                             textAnchor="middle" fill={C.ink} fontSize={14} fontWeight={900}>✕</text>;
+                const cell = (t: number, naoh: number) => {
+                  const ci = map.temps.reduce((b, v, i) =>
+                    Math.abs(v - t) < Math.abs(map.temps[b] - t) ? i : b, 0);
+                  const ri = map.naohs.reduce((b, v, i) =>
+                    Math.abs(v - naoh) < Math.abs(map.naohs[b] - naoh) ? i : b, 0);
+                  return { x: ci * 26 + 62, y: (map.naohs.length - 1 - ri) * 20 + 22 };
+                };
+                const now = cell(map.now.t, map.now.naoh);
+                const rec = cell(map.reco.t, map.reco.naoh);
+                return (<>
+                  <text x={now.x} y={now.y} textAnchor="middle" fill={C.ink}
+                        fontSize={15} fontWeight={900}>✕</text>
+                  <text x={rec.x} y={rec.y} textAnchor="middle" fill={C.status.good}
+                        fontSize={16} fontWeight={900}>★</text>
+                </>);
               })()}
               <text x={map.temps.length * 13 + 50} y={map.naohs.length * 20 + 34}
                     textAnchor="middle" fill={C.muted} fontSize={11}>Suhu Digester (°C) →</text>
             </svg>
-            <p className="text-xs" style={{ color: C.muted }}>
-              ✕ = titik operasi sekarang · biru gelap = recovery lebih tinggi
-              ({zmin.toFixed(0)}–{zmax.toFixed(0)}%)
-            </p>
+            <div className="flex items-center gap-4 text-xs" style={{ color: C.muted }}>
+              <span><b style={{ color: C.ink }}>✕</b> operasi sekarang</span>
+              <span><b style={{ color: C.status.good }}>★</b> rekomendasi optimizer</span>
+              <span className="flex items-center gap-1">
+                recovery {zmin.toFixed(0)}
+                <span style={{ display: "inline-block", width: 60, height: 8,
+                  background: `linear-gradient(90deg, ${blue(0)}, ${blue(1)})`, borderRadius: 2 }} />
+                {zmax.toFixed(0)}%
+              </span>
+            </div>
           </div>
         )}
       </div>
