@@ -83,6 +83,17 @@ export type KnowledgeDoc = {
 export const getKnowledge = () =>
   get<{ docs: KnowledgeDoc[]; charts: Record<string, string> }>("/v1/knowledge");
 
+export async function addKnowledge(payload: {
+  name: string; body: string; charts: string[]; extra_tags: string[];
+}): Promise<{ ok: boolean; saved: string; tags: string[] }> {
+  const r = await fetch(`${API}/v1/knowledge/add`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) throw new Error((await r.json()).detail ?? `knowledge: ${r.status}`);
+  return r.json();
+}
+
 export const getContract = () =>
   get<Record<string, unknown>>("/v1/integration/contract");
 

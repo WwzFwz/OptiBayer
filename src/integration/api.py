@@ -208,6 +208,42 @@ def knowledge_list() -> dict:
     }
 
 
+@app.post("/v1/knowledge/add", tags=["frontend"],
+          summary="Tambah dokumen Knowledge Pack (nama, tag, isi) — langsung dipakai AI")
+def knowledge_add(payload: dict = Body(...)) -> dict:
+    import re
+
+    from src.advisory import knowledge
+
+    name = (payload.get("name") or "").strip()
+    body = (payload.get("body") or "").strip()
+    if not name or not body:
+        raise HTTPException(400, "name & body wajib diisi")
+
+    # tag: gabungan tag chart terpilih + tag bebas
+    tags: list[str] = []
+    for cid in payload.get("charts", []):
+        spec = knowledge.CHART_TAGS.get(cid)
+        if spec:
+            for t in spec["tags"]:
+                if t not in tags:
+                    tags.append(t)
+    for t in payload.get("extra_tags", []):
+        t = str(t).strip()
+        if t and t not in tags:
+            tags.append(t)
+
+    safe = re.sub(r"[^A-Za-z0-9._-]", "-", name.lower())
+    dest = knowledge.KNOWLEDGE_DIR / f"{safe}.md"
+    knowledge.KNOWLEDGE_DIR.mkdir(exist_ok=True)
+    dest.write_text(
+        f"tags: {', '.join(tags)}\n"
+        f"status: ditulis via dashboard — menunggu review\n\n{body}\n",
+        encoding="utf-8",
+    )
+    return {"ok": True, "saved": f"{safe}.md", "tags": tags}
+
+
 @app.get("/v1/integration/contract", tags=["frontend"],
          summary="Kontrak integrasi (endpoint + MCP tools + MQTT)")
 def integration_contract() -> dict:
