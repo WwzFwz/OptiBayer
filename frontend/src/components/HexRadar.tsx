@@ -15,7 +15,8 @@ const GOLD_LT = "#e6c063";
 
 export default function HexRadar({ metrics }: { metrics: HexMetric[] }) {
   const N = metrics.length;
-  const cx = 150, cy = 140, R = 100;
+  // viewBox lebih lebar dari tinggi supaya label kiri/kanan tidak terpotong
+  const cx = 210, cy = 150, R = 105;
   const ang = (i: number) => -Math.PI / 2 + (i * 2 * Math.PI) / N;
   const pt = (i: number, r: number) =>
     [cx + r * Math.cos(ang(i)), cy + r * Math.sin(ang(i))] as const;
@@ -27,7 +28,7 @@ export default function HexRadar({ metrics }: { metrics: HexMetric[] }) {
     pt(i, R * Math.max(m.norm, 0.04)).join(",")).join(" ");
 
   return (
-    <svg viewBox="0 0 300 300" className="mx-auto w-full" style={{ maxWidth: 340 }}>
+    <svg viewBox="0 0 420 300" className="mx-auto w-full" style={{ maxWidth: 460 }}>
       {/* cincin grid heksagonal */}
       {rings.map((f, i) => (
         <polygon key={i} points={gridPoly(f)} fill="none"
@@ -65,10 +66,11 @@ export default function HexRadar({ metrics }: { metrics: HexMetric[] }) {
   );
 }
 
-// grade dari norm 0..1
+// grade dari norm 0..1 — selaras zona alarm (good≈0.55–1, warning=0.35, crit=0.12):
+// jadi warning selalu ≤C, critical selalu D. Mustahil "sehat" saat alarm merah.
 export function grade(norm: number): string {
-  if (norm >= 0.9) return "S+";
-  if (norm >= 0.78) return "S";
+  if (norm >= 0.92) return "S+";
+  if (norm >= 0.82) return "S";
   if (norm >= 0.62) return "A";
   if (norm >= 0.45) return "B";
   if (norm >= 0.28) return "C";
