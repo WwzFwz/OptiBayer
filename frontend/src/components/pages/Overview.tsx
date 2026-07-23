@@ -68,55 +68,24 @@ export default function Overview() {
 
   return (
     <div className="space-y-3">
-    {/* Profil Kesehatan Pabrik — hexagon radar */}
+    {/* Profil Kesehatan Pabrik — hexagon radar (angka aktual & tren sudah di
+        baris KPI atas; radar melengkapi dgn BENTUK profil + grade, tak mengulang) */}
     {health && (
-      <div className="grid gap-3 lg:grid-cols-3">
-        <div className="rounded-xl p-3" style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
-          <p className="mb-1 text-sm font-semibold" style={{ color: C.ink }}>
+      <div className="rounded-xl p-3" style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
+        <div className="flex flex-wrap items-baseline gap-2">
+          <p className="text-sm font-semibold" style={{ color: C.ink }}>
             Profil Kesehatan Pabrik
           </p>
-          <p className="mb-2 text-xs" style={{ color: C.muted }}>
-            Skor jam ini · <b style={{ color: "#e6c063" }}>{grade(avgGrade)}</b> —
-            makin penuh & seimbang segi enamnya, makin sehat.
-          </p>
-          <HexRadar metrics={health} />
+          <span className="rounded-full px-2 py-0.5 text-xs font-extrabold"
+                style={{ background: "#2a1f12", color: "#e6c063", border: "1px solid #c9a24a" }}>
+            {grade(avgGrade)}
+          </span>
+          <span className="text-xs" style={{ color: C.muted }}>
+            skor jam ini — makin penuh & seimbang segi enamnya, makin sehat
+          </span>
         </div>
-        {/* kartu = angka AKTUAL + tren (melengkapi radar, tak mengulang grade/bar) */}
-        <div className="lg:col-span-2 grid grid-cols-2 gap-2 md:grid-cols-3">
-          {health.map((m) => {
-            const prevV = hour > 0
-              ? (seq?.hours[hour - 1] as Record<string, number> | undefined)?.[m.key]
-              : undefined;
-            const prev = m.key === "co2_capture_t" && prevV !== undefined
-              ? prevV * 0.023 : prevV;  // co2 turunan
-            const d = prev !== undefined ? m.actual - prev : undefined;
-            const improving = d !== undefined && (m.goodUp ? d > 0 : d < 0);
-            // warna bar mengikuti grade (D..S+) — merah→kuning→hijau keemasan
-            const barColor = m.norm >= 0.62 ? "#c9a24a"
-              : m.norm >= 0.45 ? C.status.warning : C.status.critical;
-            return (
-              <div key={m.label} className="flex flex-col justify-center rounded-lg p-3"
-                   style={{ background: C.page, border: `1px solid ${C.grid}` }}>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-xs" style={{ color: C.muted }}>{m.label}</span>
-                  {d !== undefined && Math.abs(d) > 0.01 && (
-                    <span className="text-xs font-semibold"
-                          style={{ color: improving ? C.status.good : C.status.critical }}>
-                      {d >= 0 ? "↑" : "↓"} {Math.abs(d).toLocaleString("id-ID", { maximumFractionDigits: 1 })}
-                    </span>
-                  )}
-                </div>
-                <span className="mt-0.5 text-lg font-bold" style={{ color: C.ink }}>
-                  {m.actual.toLocaleString("id-ID", { maximumFractionDigits: m.unit === "/jam" ? 0 : 1 })}
-                  <span className="ml-0.5 text-xs font-normal" style={{ color: C.muted }}>{m.unit}</span>
-                </span>
-                <div className="mt-2 h-1.5 w-full rounded-full" style={{ background: C.grid }}>
-                  <div className="h-full rounded-full transition-all"
-                       style={{ width: `${m.norm * 100}%`, background: barColor }} />
-                </div>
-              </div>
-            );
-          })}
+        <div className="mx-auto max-w-md">
+          <HexRadar metrics={health} />
         </div>
       </div>
     )}
