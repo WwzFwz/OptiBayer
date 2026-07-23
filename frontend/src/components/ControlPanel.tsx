@@ -40,7 +40,9 @@ export default function ControlPanel() {
         <div className="mb-4 flex gap-2">
           <button
             onClick={() => s.setPlaying(!s.playing)}
-            className="flex flex-1 items-center justify-center gap-1 rounded py-2 text-sm font-semibold"
+            aria-pressed={s.playing}
+            aria-label={s.playing ? "Jeda replay" : "Mainkan replay"}
+            className="btn-lift flex flex-1 items-center justify-center gap-1 rounded-lg py-2 text-sm font-semibold"
             style={{ background: s.playing ? C.status.warning : C.status.good, color: "#fff" }}
           >
             {s.playing ? <Pause size={16} /> : <Play size={16} />}
@@ -48,7 +50,8 @@ export default function ControlPanel() {
           </button>
           <button
             onClick={() => s.seq && s.setHour(Math.min(s.hour + 1, s.seq.n - 1))}
-            className="flex items-center justify-center rounded px-3"
+            aria-label="Maju satu jam"
+            className="flex items-center justify-center rounded-lg px-3"
             style={{ border: `1px solid ${C.grid}`, color: C.ink2 }}
           >
             <SkipForward size={16} />

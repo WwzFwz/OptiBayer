@@ -3,6 +3,7 @@
 // Port dari app/views/pfd.py; SVG lebih tajam & mudah dianimasikan dari Plotly.
 import { useState } from "react";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
+import { Skeleton } from "@/components/ui/Feedback";
 import { useStore } from "@/lib/store";
 import { C, Severity } from "@/lib/theme";
 
@@ -34,7 +35,7 @@ const PIPE = {
 export default function Diagram() {
   const { hourData, seq, hour } = useStore();
   const [layer, setLayer] = useState<Layer>("operasi");
-  if (!hourData) return <p style={{ color: C.muted }}>Memuat…</p>;
+  if (!hourData) return <Skeleton h={420} />;
 
   // sparkline 12 jam terakhir (konteks tren di atas diagram)
   const h12 = seq?.hours.slice(Math.max(0, hour - 11), hour + 1)

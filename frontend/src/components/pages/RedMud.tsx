@@ -3,13 +3,14 @@
 import { useState } from "react";
 import Sankey, { Flow, Node } from "@/components/Sankey";
 import ExplainAI from "@/components/ExplainAI";
+import { Skeleton } from "@/components/ui/Feedback";
 import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
 
 export default function RedMud() {
   const { hourData } = useStore();
   const [price, setPrice] = useState(30000);
-  if (!hourData) return <p style={{ color: C.muted }}>Memuat…</p>;
+  if (!hourData) return <Skeleton h={300} />;
   const cb = hourData.carbonation;
   const ab = hourData.al_balance ?? {};
   const rm = hourData.kpi.red_mud_t;

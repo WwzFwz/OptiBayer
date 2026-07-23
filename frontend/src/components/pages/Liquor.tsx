@@ -2,12 +2,13 @@
 // Liquor Loop — Sankey natrium: ke mana NaOH bocor.
 import Sankey, { Flow, Node } from "@/components/Sankey";
 import ExplainAI from "@/components/ExplainAI";
+import { Skeleton } from "@/components/ui/Feedback";
 import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
 
 export default function Liquor() {
   const { hourData } = useStore();
-  if (!hourData) return <p style={{ color: C.muted }}>Memuat…</p>;
+  if (!hourData) return <Skeleton h={300} />;
   const nb = hourData.na_balance;
   const mk = Math.max(nb.makeup_t ?? 0, 0.01);
 
