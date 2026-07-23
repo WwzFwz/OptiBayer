@@ -8,6 +8,8 @@ import {
 import { getRegret, RegretData } from "@/lib/api";
 import ExplainAI from "@/components/ExplainAI";
 import HexRadar, { grade, HexMetric } from "@/components/HexRadar";
+import CorrelationPanel from "@/components/CorrelationPanel";
+import AuditTrail from "@/components/AuditTrail";
 import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
 
@@ -35,6 +37,8 @@ const CHARTS = [
   { key: "total_opex", title: "Total OPEX (/jam)", color: C.series[2], band: [0, 25000] },
   { key: "reactive_sio2_pct", title: "Silika Reaktif Feed (%) — musuh utama", color: C.series[4], band: [0, 5.5] },
   { key: "red_mud_t", title: "Red Mud Basah (t)", color: C.series[1], band: [0, 500] },
+  { key: "precip_yield_pct", title: "Yield Presipitasi (%)", color: C.series[3], band: [76, 100] },
+  { key: "co2_capture_t", title: "Potensi CO₂ Capture (t) — karbonasi red mud", color: "#c9a24a", band: null },
 ] as const;
 
 export default function Overview() {
@@ -43,7 +47,10 @@ export default function Overview() {
   const [busy, setBusy] = useState(false);
 
   if (!seq) return <p style={{ color: C.muted }}>Memuat deret replay…</p>;
-  const data = seq.hours.map((h, i) => ({ jam: i, ...h }));
+  // co2_capture_t turunan: 23 kg CO₂ / ton red mud (paper 2026)
+  const data = seq.hours.map((h, i) => ({
+    jam: i, ...h, co2_capture_t: +(h.red_mud_t * 0.023).toFixed(2),
+  }));
 
   async function runRegret() {
     setBusy(true);
@@ -108,9 +115,11 @@ export default function Overview() {
                 labelStyle={{ color: C.muted }} itemStyle={{ color }}
                 formatter={(v) => [Number(v).toFixed(2), title]}
                 labelFormatter={(l) => `Jam ${l}:00`} />
-              <ReferenceArea y1={band[0]} y2={band[1]}
-                             fill="#ffffff" fillOpacity={0.04}
-                             stroke={C.muted} strokeOpacity={0.25} strokeDasharray="4 4" />
+              {band && (
+                <ReferenceArea y1={band[0]} y2={band[1]}
+                               fill="#ffffff" fillOpacity={0.04}
+                               stroke={C.muted} strokeOpacity={0.25} strokeDasharray="4 4" />
+              )}
               <ReferenceLine x={hour} stroke={C.ink} strokeDasharray="4 3" />
               <Line type="monotone" dataKey={key} stroke={color}
                     strokeWidth={2} dot={false} isAnimationActive={false} />
@@ -193,6 +202,12 @@ export default function Overview() {
         </div>
       )}
     </div>
+
+    {/* Korelasi & Scatter — analisis data historis */}
+    <CorrelationPanel />
+
+    {/* Audit trail keputusan advisory */}
+    <AuditTrail />
     </div>
   );
 }

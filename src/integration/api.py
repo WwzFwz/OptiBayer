@@ -154,6 +154,10 @@ def operating_map(scenario_id: int, hour: int, n: int = 20) -> dict:
                 "naoh": round(knobs["naoh_conc_gl"], 0)},
         "reco": {"t": round(float(reco["digester_temp_c"]), 1),
                  "naoh": round(float(reco["naoh_conc_gl"]), 0)},
+        "composition": {k: round(float(v), 3) for k, v in comp.items()},
+        "knobs_now": {k: round(float(v), 2) for k, v in knobs.items()},
+        "bounds": {k: schema.SAFE_BOUNDS[k] for k in schema.KNOBS},
+        "knob_labels": {k: schema.label(k) for k in schema.KNOBS},
     }
 
 
@@ -209,6 +213,33 @@ def knowledge_list() -> dict:
             "body": d["body"], "used_by": knowledge.charts_for_doc(d),
         } for d in docs],
         "charts": {k: v["label"] for k, v in knowledge.CHART_TAGS.items()},
+    }
+
+
+@app.get("/v1/correlation", tags=["frontend"],
+         summary="Korelasi fitur vs target + scatter (analisis data historis penuh)")
+def correlation(target: str = "recovery_pct", feature: str = "reactive_sio2_pct") -> dict:
+    import numpy as np
+
+    from src import schema
+    from src.data.adapters import load_clean
+
+    df = load_clean()
+    corr = []
+    for f in schema.FEATURES:
+        r = float(np.corrcoef(df[f], df[target])[0, 1])
+        corr.append({"feature": f, "label": schema.label(f), "r": round(r, 3)})
+    corr.sort(key=lambda x: abs(x["r"]), reverse=True)
+    # scatter untuk satu fitur terpilih (subsample utk ringan)
+    sub = df.sample(min(300, len(df)), random_state=1)
+    scatter = [{"x": round(float(a), 2), "y": round(float(b), 2)}
+               for a, b in zip(sub[feature], sub[target])]
+    return {
+        "target": target, "target_label": schema.label(target),
+        "feature": feature, "feature_label": schema.label(feature),
+        "corr": corr, "scatter": scatter,
+        "features": [{"key": f, "label": schema.label(f)} for f in schema.FEATURES],
+        "targets": [{"key": t, "label": schema.label(t)} for t in schema.TARGETS],
     }
 
 
@@ -377,4 +408,10 @@ def replay_hour(scenario_id: int, hour: int, fast: bool = True) -> dict:
         "delta_if_followed": ctx["delta_if_followed"],
         "na_balance": ctx["na_balance"],
         "carbonation": ctx["carbonation"],
+        "al_balance": {
+            "feed_t": float(row.get("al_feed_t", 0.0)),
+            "recycled_t": float(row.get("al_recycled_t", 0.0)),
+            "lost_redmud_t": float(row.get("al_lost_redmud_t", 0.0)),
+            "hydrate_t": float(row.get("hydrate_t", 0.0)),
+        },
     }

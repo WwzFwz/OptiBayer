@@ -67,6 +67,21 @@ skala pabrik).
 | 2026-07-11 | 3 taruhan inovasi: carbon-aware optimization, regret meter, shift-handover report (doc 12) | Pembeda nyata & murah; RL/multi-agent DITOLAK (risiko > nilai) |
 | 2026-07-11 | LLM = provider fleksibel via env (`template`/`ollama`/`groq`/`gemini`), TANPA token berbayar | Tidak ada budget API; laptop 16 GB RAM cukup utk Qwen2.5-7B Q4 lokal; Groq/Gemini free-tier utk demo lebih ngebut kalau ada internet |
 
+## Transformasi frontend (2026-07-22)
+
+**FastAPI REST + Next.js/React sebagai frontend KEDUA** — Streamlit tetap utuh.
+Inti headless + kontrak (`src/integration/api.py`, doc 19). 9 halaman React
+setara PENUH dgn Streamlit (0 fitur berkurang): Overview (HexRadar profil
+kesehatan, 6 tren + yield/CO₂, regret+handover, korelasi+scatter, audit trail),
+Diagram HMI 3 lapisan + sparkline, Digesti (heatmap ✕/★ + what-if + Pareto +
+parallel coords), Liquor (Sankey Na + dosis CaO), Presipitasi (Ceq), Red Mud
+(Sankey Al + karbonasi), Lab (ML vs fisika + ekstrapolasi + sensitivitas +
+tornado), Knowledge (+ tambah dokumen), Integrasi (playground). Advisory
+bisa di-drag (dock atas/kanan) + pagination. Verifikasi: tsc bersih, next
+build sukses, semua endpoint 200. **Bonus:** perbaikan `regret.shift_series`
+(tak pernah masuk main) sekaligus memperbaiki regret meter Streamlit.
+Dependensi: fastapi 0.115→0.139 (Streamlit aman), + node ≥18 utk frontend.
+
 ## Status implementasi (2026-07-11)
 
 **M0–M3 + sebagian M4 SELESAI & teruji** (semua test di `tests/` hijau):

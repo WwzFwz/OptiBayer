@@ -31,6 +31,7 @@ export type HourData = {
   delta_if_followed: Record<string, number>;
   na_balance: Record<string, number>;
   carbonation: Record<string, number>;
+  al_balance?: Record<string, number>;
 };
 
 export type ReplaySeq = {
@@ -57,6 +58,10 @@ export type OperatingMap = {
   temps: number[]; naohs: number[]; z: number[][];
   now: { t: number; naoh: number };
   reco: { t: number; naoh: number };
+  composition: Record<string, number>;
+  knobs_now: Record<string, number>;
+  bounds: Record<string, [number, number]>;
+  knob_labels: Record<string, string>;
 };
 
 export type Sensitivity = {
@@ -120,6 +125,16 @@ export type RegretData = {
 };
 export const getRegret = (s: number, hour: number) =>
   get<RegretData>(`/v1/regret?scenario_id=${s}&hour=${hour}`);
+
+export type CorrelationData = {
+  target: string; target_label: string; feature: string; feature_label: string;
+  corr: Array<{ feature: string; label: string; r: number }>;
+  scatter: Array<{ x: number; y: number }>;
+  features: Array<{ key: string; label: string }>;
+  targets: Array<{ key: string; label: string }>;
+};
+export const getCorrelation = (target: string, feature: string) =>
+  get<CorrelationData>(`/v1/correlation?target=${target}&feature=${feature}`);
 
 export async function explainChart(
   title: string, context: unknown, question = "", tags?: string[],

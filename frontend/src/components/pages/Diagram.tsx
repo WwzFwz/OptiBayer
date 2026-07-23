@@ -2,8 +2,28 @@
 // Diagram Proses HMI (SVG) — sirkuit Bayer live, 3 lapisan analitik.
 // Port dari app/views/pfd.py; SVG lebih tajam & mudah dianimasikan dari Plotly.
 import { useState } from "react";
+import { Line, LineChart, ResponsiveContainer } from "recharts";
 import { useStore } from "@/lib/store";
 import { C, Severity } from "@/lib/theme";
+
+function Spark({ data, dataKey, title, color, cur }: {
+  data: Array<Record<string, number>>; dataKey: string; title: string;
+  color: string; cur: number;
+}) {
+  return (
+    <div className="rounded-lg p-2" style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
+      <p className="mb-1 text-xs" style={{ color: C.ink2 }}>
+        {title} · <b style={{ color }}>{cur.toFixed(1)}</b>
+      </p>
+      <ResponsiveContainer width="100%" height={44}>
+        <LineChart data={data}>
+          <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2}
+                dot={false} isAnimationActive={false} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 type Layer = "operasi" | "kebocoran" | "karbon";
 const PIPE = {
@@ -12,9 +32,13 @@ const PIPE = {
 };
 
 export default function Diagram() {
-  const { hourData } = useStore();
+  const { hourData, seq, hour } = useStore();
   const [layer, setLayer] = useState<Layer>("operasi");
   if (!hourData) return <p style={{ color: C.muted }}>Memuat…</p>;
+
+  // sparkline 12 jam terakhir (konteks tren di atas diagram)
+  const h12 = seq?.hours.slice(Math.max(0, hour - 11), hour + 1)
+    .map((h, i) => ({ i, ...h })) ?? [];
 
   const nb = hourData.na_balance;
   const cb = hourData.carbonation;
@@ -53,8 +77,20 @@ export default function Diagram() {
                      color: layer === id ? C.ink : C.muted }}>
             {lbl}
           </button>
-        ))}
+          ))}
       </div>
+
+      {/* sparkline konteks 12 jam */}
+      {h12.length > 2 && (
+        <div className="grid grid-cols-3 gap-2">
+          <Spark data={h12} dataKey="recovery_pct" title="Recovery 12 jam (%)"
+                 color={C.series[0]} cur={kpi.recovery_pct} />
+          <Spark data={h12} dataKey="reactive_sio2_pct" title="SiO₂ feed 12 jam (%)"
+                 color={C.series[4]} cur={sio2} />
+          <Spark data={h12} dataKey="red_mud_t" title="Red mud 12 jam (t)"
+                 color={C.series[1]} cur={kpi.red_mud_t} />
+        </div>
+      )}
 
       <div className="rounded-xl p-2" style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
         <svg viewBox="0 0 1420 640" className="w-full" style={{ maxHeight: "62vh" }}>

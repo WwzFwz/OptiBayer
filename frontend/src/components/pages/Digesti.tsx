@@ -8,6 +8,7 @@ import {
 import { getOperatingMap, getPareto, OperatingMap, ParetoData } from "@/lib/api";
 import ParallelCoords, { Dim } from "@/components/ParallelCoords";
 import ExplainAI from "@/components/ExplainAI";
+import WhatIfDigesti from "@/components/WhatIfDigesti";
 import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
 
@@ -94,6 +95,9 @@ export default function Digesti() {
           </div>
         )}
       </div>
+
+      {/* What-if setpoint jam ini */}
+      {map && <WhatIfDigesti map={map} />}
 
       {/* Pareto + radar */}
       <div className="rounded-xl p-3" style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
