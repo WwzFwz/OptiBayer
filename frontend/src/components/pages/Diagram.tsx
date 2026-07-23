@@ -25,7 +25,7 @@ function Spark({ data, dataKey, title, color, cur }: {
   );
 }
 
-type Layer = "operasi" | "kebocoran" | "karbon";
+type Layer = "operasi" | "aluminium" | "kebocoran" | "karbon";
 const PIPE = {
   liquor: C.series[0], slurry: "#b08968", redmud: C.status.serious,
   product: C.status.good, water: C.series[1], recycle: C.series[1],
@@ -49,6 +49,12 @@ export default function Diagram() {
 
   // highlight per lapisan
   const hl = (tag: string): string | null => {
+    if (layer === "aluminium")
+      // jalur Al: masuk (feed+recycle) → proses → produk (hijau) / red mud (merah)
+      return { feed: C.series[0], slurry2: C.series[0], recycle: C.series[4],
+               dig: C.series[0], overflow: C.series[0],
+               product: C.status.good, underflow: C.status.critical,
+               tailing: C.status.critical }[tag] ?? null;
     if (layer === "kebocoran")
       return { naoh: C.status.info, recycle: C.status.warning,
                underflow: C.status.critical, tailing: C.status.critical,
@@ -68,7 +74,8 @@ export default function Diagram() {
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        {([["operasi", "Operasi"], ["kebocoran", "Kebocoran NaOH"],
+        {([["operasi", "Operasi"], ["aluminium", "Aliran Aluminium"],
+           ["kebocoran", "Kebocoran NaOH"],
            ["karbon", "Jalur Karbon (CCUS)"]] as const).map(([id, lbl]) => (
           <button key={id} onClick={() => setLayer(id)}
             className="rounded-lg px-3 py-1.5 text-sm"
@@ -136,6 +143,25 @@ export default function Diagram() {
             <Readout x={1265} y={410} label="Red mud" val={`${kpi.red_mud_t.toFixed(0)} t`}
                      color={C.status.serious} />
           </>}
+          {layer === "aluminium" && (() => {
+            const ab = hourData.al_balance ?? {};
+            const feed = ab.feed_t ?? 0, lost = ab.lost_redmud_t ?? 0;
+            const pct = feed > 0 ? (lost / feed * 100) : 0;
+            return <>
+              <Readout x={250} y={70} label="Al feed bauksit"
+                       val={`${feed.toFixed(0)} t`} color={C.series[0]} />
+              <Readout x={320} y={200} label="Al recycle"
+                       val={`${(ab.recycled_t ?? 0).toFixed(0)} t`} color={C.series[4]} />
+              <Readout x={985} y={360} label="Produk Al(OH)₃"
+                       val={`${(ab.hydrate_t ?? 0).toFixed(0)} t`} color={C.status.good} />
+              <Readout x={1265} y={410} label="Al HILANG ke red mud"
+                       val={`${lost.toFixed(1)} t · ${pct.toFixed(1)}%`}
+                       color={C.status.critical} />
+              <Readout x={735} y={70} label="Recovery"
+                       val={`${kpi.recovery_pct.toFixed(1)} %`}
+                       color={kpi.recovery_pct >= 85 ? C.status.good : C.status.critical} />
+            </>;
+          })()}
           {layer === "kebocoran" && <>
             <Readout x={490} y={330} label="Make-up NaOH" val={`${nb.makeup_t?.toFixed(1)} t`} color={C.status.info} />
             <Readout x={735} y={70} label="Terkunci DSP" val={`${nb.dsp_loss_t?.toFixed(1)} t`} color={C.status.warning} />
