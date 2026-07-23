@@ -91,21 +91,28 @@ export default function Overview() {
               ? prevV * 0.023 : prevV;  // co2 turunan
             const d = prev !== undefined ? m.actual - prev : undefined;
             const improving = d !== undefined && (m.goodUp ? d > 0 : d < 0);
+            // warna bar mengikuti grade (D..S+) — merah→kuning→hijau keemasan
+            const barColor = m.norm >= 0.62 ? "#c9a24a"
+              : m.norm >= 0.45 ? C.status.warning : C.status.critical;
             return (
               <div key={m.label} className="flex flex-col justify-center rounded-lg p-3"
                    style={{ background: C.page, border: `1px solid ${C.grid}` }}>
-                <span className="text-xs" style={{ color: C.muted }}>{m.label}</span>
-                <div className="mt-0.5 flex items-baseline gap-2">
-                  <span className="text-lg font-bold" style={{ color: C.ink }}>
-                    {m.actual.toLocaleString("id-ID", { maximumFractionDigits: m.unit === "/jam" ? 0 : 1 })}
-                    <span className="ml-0.5 text-xs font-normal" style={{ color: C.muted }}>{m.unit}</span>
-                  </span>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-xs" style={{ color: C.muted }}>{m.label}</span>
                   {d !== undefined && Math.abs(d) > 0.01 && (
                     <span className="text-xs font-semibold"
                           style={{ color: improving ? C.status.good : C.status.critical }}>
                       {d >= 0 ? "↑" : "↓"} {Math.abs(d).toLocaleString("id-ID", { maximumFractionDigits: 1 })}
                     </span>
                   )}
+                </div>
+                <span className="mt-0.5 text-lg font-bold" style={{ color: C.ink }}>
+                  {m.actual.toLocaleString("id-ID", { maximumFractionDigits: m.unit === "/jam" ? 0 : 1 })}
+                  <span className="ml-0.5 text-xs font-normal" style={{ color: C.muted }}>{m.unit}</span>
+                </span>
+                <div className="mt-2 h-1.5 w-full rounded-full" style={{ background: C.grid }}>
+                  <div className="h-full rounded-full transition-all"
+                       style={{ width: `${m.norm * 100}%`, background: barColor }} />
                 </div>
               </div>
             );
