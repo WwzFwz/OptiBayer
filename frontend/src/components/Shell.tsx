@@ -20,15 +20,11 @@ import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
 
 const REPLAY_FREE: PageId[] = ["lab", "knowledge", "integrasi"];
-// advisory PENUH hanya di Overview (pusat monitoring); halaman lain RINGKAS
-// (Diagram sudah punya visual sendiri -> advisory penuh di sana = redundan).
-const FULL_ADVISORY: PageId[] = ["overview"];
 
 export default function Shell() {
   const s = useStore();
   const [page, setPage] = useState<PageId>("overview");
   const monitoring = !REPLAY_FREE.includes(page);
-  const fullAdvisory = FULL_ADVISORY.includes(page);
 
   const day = Math.floor(s.hour / 24) + 1;
   const clock = s.hour % 24;
@@ -74,9 +70,8 @@ export default function Shell() {
         <div className="flex min-h-0 flex-1">
           <main className="min-w-0 flex-1 space-y-3 overflow-y-auto p-4">
             {monitoring && <Kpi />}
-            {/* penuh (drag-dock top) hanya di overview & diagram; stasiun = ringkas */}
-            {monitoring && fullAdvisory && s.dock === "top" && <Advisory setPage={setPage} />}
-            {monitoring && !fullAdvisory && <Advisory setPage={setPage} compact />}
+            {/* advisory bisa di-drag: dock atas (di sini) atau kanan (aside) */}
+            {monitoring && s.dock === "top" && <Advisory setPage={setPage} />}
             {page === "overview" && <Overview />}
             {page === "diagram" && <Diagram />}
             {page === "digesti" && <Digesti />}
@@ -87,7 +82,7 @@ export default function Shell() {
             {page === "knowledge" && <Knowledge />}
             {page === "integrasi" && <Integrasi />}
           </main>
-          {monitoring && fullAdvisory && s.dock === "right" && (
+          {monitoring && s.dock === "right" && (
             <aside className="w-[340px] shrink-0 overflow-y-auto p-3"
                    style={{ borderLeft: `1px solid ${C.grid}` }}>
               <Advisory setPage={setPage} />

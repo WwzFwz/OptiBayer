@@ -48,7 +48,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [hourData, setHourData] = useState<HourData | null>(null);
   const [loadingHour, setLoadingHour] = useState(false);
   const [apiDown, setApiDown] = useState(false);
-  const [dock, setDockRaw] = useState<Dock>("top");
+  const [dock, setDockRaw] = useState<Dock>("right");
   const [panelOpen, setPanelOpen] = useState(false);
   const [decisions, setDecisions] = useState<Record<string, "terima" | "tolak">>({});
   const reqId = useRef(0);

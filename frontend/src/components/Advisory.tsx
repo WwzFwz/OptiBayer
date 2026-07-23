@@ -14,44 +14,22 @@ const SEV_LABEL: Record<Severity, string> = {
   info: "INFO", good: "OK",
 };
 
-export default function Advisory({ setPage, compact = false }: {
-  setPage: (p: PageId) => void; compact?: boolean;
-}) {
+const PER_PAGE = 3;
+
+export default function Advisory({ setPage }: { setPage: (p: PageId) => void }) {
   const s = useStore();
   const [dragging, setDragging] = useState(false);
   const [ghost, setGhost] = useState<{ x: number; y: number } | null>(null);
-  const [collapsed, setCollapsed] = useState(true);
+  const [pageIdx, setPageIdx] = useState(0);
   const startPos = useRef<{ x: number; y: number } | null>(null);
 
   const cards = s.hourData?.cards ?? [];
-
-  // di halaman stasiun: ringkas — 1 baris (severity teratas), klik utk buka
-  if (compact) {
-    if (cards.length === 0) return null;
-    const top = cards[0];
-    const sev = C.status[top.severity as Severity] ?? C.status.info;
-    return (
-      <section className="rounded-xl" style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
-        <button onClick={() => setCollapsed(!collapsed)}
-          className="flex w-full items-center gap-2 px-3 py-2 text-left">
-          <span style={{ color: sev, fontSize: "0.7rem" }}>●</span>
-          <span className="text-sm font-semibold" style={{ color: C.ink }}>
-            Advisory ({cards.length})
-          </span>
-          <span className="truncate text-xs" style={{ color: C.muted }}>— {top.title}</span>
-          <span className="ml-auto text-xs" style={{ color: C.muted }}>{collapsed ? "buka ▾" : "tutup ▴"}</span>
-        </button>
-        {!collapsed && (
-          <div className="grid gap-2 p-2 md:grid-cols-2 xl:grid-cols-3">
-            {cards.map((c, i) => (
-              <AdvisoryCard key={`${s.hour}-${i}`} card={c}
-                decisionKey={`${s.scenario}-${s.hour}-${c.title}`} setPage={setPage} />
-            ))}
-          </div>
-        )}
-      </section>
-    );
-  }
+  const right = s.dock === "right";
+  // pagination: dock kanan (sempit) => 3/hal; dock atas (lebar) => 6/hal
+  const perPage = right ? PER_PAGE : PER_PAGE * 2;
+  const nPages = Math.max(1, Math.ceil(cards.length / perPage));
+  const pi = Math.min(pageIdx, nPages - 1);
+  const shown = cards.slice(pi * perPage, pi * perPage + perPage);
 
   function onPointerDown(e: React.PointerEvent) {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -106,8 +84,11 @@ export default function Advisory({ setPage, compact = false }: {
           <span className="text-xs" style={{ color: C.muted }}>
             {cards.length} kartu · {s.hourData?.fast ? "mode Play (ringkas)" : "analisis penuh"}
           </span>
+          <span className="ml-auto text-[0.65rem]" style={{ color: C.muted }}>
+            {right ? "dock kanan" : "dock atas"} · seret ⠿
+          </span>
         </header>
-        <div className={s.dock === "right"
+        <div className={right
           ? "flex flex-col gap-2 p-2"
           : "grid gap-2 p-2 md:grid-cols-2 xl:grid-cols-3"}>
           {cards.length === 0 && (
@@ -115,12 +96,37 @@ export default function Advisory({ setPage, compact = false }: {
               {s.loadingHour ? "Memuat advisory…" : "Tidak ada advisory jam ini."}
             </p>
           )}
-          {cards.map((c, i) => (
-            <AdvisoryCard key={`${s.hour}-${i}`} card={c}
+          {shown.map((c, i) => (
+            <AdvisoryCard key={`${s.hour}-${pi}-${i}`} card={c}
                           decisionKey={`${s.scenario}-${s.hour}-${c.title}`}
                           setPage={setPage} />
           ))}
         </div>
+        {/* pagination */}
+        {nPages > 1 && (
+          <div className="flex items-center justify-center gap-2 border-t px-3 py-2"
+               style={{ borderColor: C.grid }}>
+            <button onClick={() => setPageIdx(Math.max(0, pi - 1))}
+              disabled={pi === 0}
+              className="rounded px-2 py-1 text-xs disabled:opacity-40"
+              style={{ border: `1px solid ${C.grid}`, color: C.ink2 }}>‹ Sebelumnya</button>
+            <div className="flex gap-1">
+              {Array.from({ length: nPages }, (_, k) => (
+                <button key={k} onClick={() => setPageIdx(k)}
+                  className="h-2 w-2 rounded-full"
+                  style={{ background: k === pi ? C.series[0] : C.grid }}
+                  aria-label={`halaman ${k + 1}`} />
+              ))}
+            </div>
+            <button onClick={() => setPageIdx(Math.min(nPages - 1, pi + 1))}
+              disabled={pi === nPages - 1}
+              className="rounded px-2 py-1 text-xs disabled:opacity-40"
+              style={{ border: `1px solid ${C.grid}`, color: C.ink2 }}>Berikutnya ›</button>
+            <span className="ml-1 text-[0.65rem]" style={{ color: C.muted }}>
+              {pi + 1}/{nPages}
+            </span>
+          </div>
+        )}
       </section>
     </>
   );
