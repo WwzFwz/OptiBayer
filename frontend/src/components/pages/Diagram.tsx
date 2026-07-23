@@ -77,7 +77,7 @@ export default function Diagram() {
         {([["operasi", "Operasi"], ["aluminium", "Aliran Aluminium"],
            ["kebocoran", "Kebocoran NaOH"],
            ["karbon", "Jalur Karbon (CCUS)"]] as const).map(([id, lbl]) => (
-          <button key={id} onClick={() => setLayer(id)}
+          <button key={id} onClick={() => setLayer(id)} aria-pressed={layer === id}
             className="rounded-lg px-3 py-1.5 text-sm"
             style={{ border: `1px solid ${layer === id ? C.accent : C.grid}`,
                      background: layer === id ? "#26262450" : "transparent",

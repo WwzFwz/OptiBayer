@@ -72,15 +72,18 @@ export default function Shell() {
             {monitoring && <Kpi />}
             {/* advisory bisa di-drag: dock atas (di sini) atau kanan (aside) */}
             {monitoring && s.dock === "top" && <Advisory setPage={setPage} />}
-            {page === "overview" && <Overview />}
-            {page === "diagram" && <Diagram />}
-            {page === "digesti" && <Digesti />}
-            {page === "liquor" && <Liquor />}
-            {page === "presipitasi" && <Presipitasi />}
-            {page === "redmud" && <RedMud />}
-            {page === "lab" && <Lab />}
-            {page === "knowledge" && <Knowledge />}
-            {page === "integrasi" && <Integrasi />}
+            {/* key=page → fade-in ulang tiap ganti halaman (transisi halus) */}
+            <div key={page} className="fade-in space-y-3">
+              {page === "overview" && <Overview />}
+              {page === "diagram" && <Diagram />}
+              {page === "digesti" && <Digesti />}
+              {page === "liquor" && <Liquor />}
+              {page === "presipitasi" && <Presipitasi />}
+              {page === "redmud" && <RedMud />}
+              {page === "lab" && <Lab />}
+              {page === "knowledge" && <Knowledge />}
+              {page === "integrasi" && <Integrasi />}
+            </div>
           </main>
           {monitoring && s.dock === "right" && (
             <aside className="w-[340px] shrink-0 overflow-y-auto p-3"

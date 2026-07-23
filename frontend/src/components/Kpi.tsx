@@ -2,6 +2,7 @@
 // Baris KPI — stat tiles seragam, delta semantik (naik-nya OPEX = merah).
 import { useStore } from "@/lib/store";
 import { C, INVERTED, statusOf } from "@/lib/theme";
+import CountUp from "./ui/CountUp";
 
 const TILES = [
   { key: "recovery_pct", label: "Recovery Al", fmt: (v: number) => `${v.toFixed(1)}%` },
@@ -35,7 +36,9 @@ export default function Kpi() {
               <span style={{ color: C.status[st], fontSize: "0.6rem" }}>●</span>
               {label}
             </p>
-            <p className="text-2xl font-bold" style={{ color: C.ink }}>{fmt(v)}</p>
+            <p className="text-2xl font-bold" style={{ color: C.ink }}>
+              <CountUp value={v} format={fmt} />
+            </p>
             {delta !== undefined ? (
               <p className="mt-1 rounded-full px-2 py-0.5 text-xs font-semibold"
                  style={{

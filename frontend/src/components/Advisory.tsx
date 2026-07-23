@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import { Check, GripHorizontal, Map, X } from "lucide-react";
 import { Card } from "@/lib/api";
 import { useStore } from "@/lib/store";
+import { useToast } from "./ui/Toast";
 import { C, Severity } from "@/lib/theme";
 import { PageId } from "./Rail";
 
@@ -56,7 +57,7 @@ export default function Advisory({ setPage }: { setPage: (p: PageId) => void }) 
       {dragging && (
         <div className="pointer-events-none fixed inset-y-0 right-0 z-40"
              style={{ width: 320, background: C.accent + "22",
-                      borderLeft: `2px dashed ${C.series[0]}` }} />
+                      borderLeft: `2px dashed ${C.accent}` }} />
       )}
       {dragging && ghost && (
         <div className="pointer-events-none fixed z-50 rounded px-3 py-2 text-xs"
@@ -108,19 +109,20 @@ export default function Advisory({ setPage }: { setPage: (p: PageId) => void }) 
                style={{ borderColor: C.grid }}>
             <button onClick={() => setPageIdx(Math.max(0, pi - 1))}
               disabled={pi === 0}
-              className="rounded px-2 py-1 text-xs disabled:opacity-40"
+              className="rounded-lg px-2 py-1 text-xs disabled:opacity-40"
               style={{ border: `1px solid ${C.grid}`, color: C.ink2 }}>‹ Sebelumnya</button>
             <div className="flex gap-1">
               {Array.from({ length: nPages }, (_, k) => (
                 <button key={k} onClick={() => setPageIdx(k)}
                   className="h-2 w-2 rounded-full"
                   style={{ background: k === pi ? C.accent : C.grid }}
-                  aria-label={`halaman ${k + 1}`} />
+                  aria-label={`halaman ${k + 1} dari ${nPages}`}
+                  aria-current={k === pi ? "page" : undefined} />
               ))}
             </div>
             <button onClick={() => setPageIdx(Math.min(nPages - 1, pi + 1))}
               disabled={pi === nPages - 1}
-              className="rounded px-2 py-1 text-xs disabled:opacity-40"
+              className="rounded-lg px-2 py-1 text-xs disabled:opacity-40"
               style={{ border: `1px solid ${C.grid}`, color: C.ink2 }}>Berikutnya ›</button>
             <span className="ml-1 text-[0.65rem]" style={{ color: C.muted }}>
               {pi + 1}/{nPages}
@@ -136,6 +138,7 @@ function AdvisoryCard({ card, decisionKey, setPage }: {
   card: Card; decisionKey: string; setPage: (p: PageId) => void;
 }) {
   const s = useStore();
+  const toast = useToast();
   const sev = C.status[card.severity as Severity] ?? C.status.info;
   const decided = s.decisions[decisionKey];
   return (
@@ -163,14 +166,22 @@ function AdvisoryCard({ card, decisionKey, setPage }: {
         </p>
       ) : (
         <div className="grid grid-cols-3 gap-2">
-          <Btn bg={C.status.good} onClick={() => s.decide(decisionKey, "terima")}>
+          <Btn bg={C.status.good} label={`Terima: ${card.title}`}
+               onClick={() => {
+                 s.decide(decisionKey, "terima");
+                 toast("success", `Advisory diterima — ${card.title}`);
+               }}>
             <Check size={13} /> Terima
           </Btn>
-          <Btn outline={C.status.critical}
-               onClick={() => s.decide(decisionKey, "tolak")}>
+          <Btn outline={C.status.critical} label={`Tolak: ${card.title}`}
+               onClick={() => {
+                 s.decide(decisionKey, "tolak");
+                 toast("info", `Advisory ditolak — tercatat di audit`);
+               }}>
             <X size={13} /> Tolak
           </Btn>
-          <Btn outline={C.grid} onClick={() => setPage("digesti")}>
+          <Btn outline={C.grid} label="Buka peta operasi"
+               onClick={() => setPage("digesti")}>
             <Map size={13} /> Peta
           </Btn>
         </div>
@@ -179,12 +190,13 @@ function AdvisoryCard({ card, decisionKey, setPage }: {
   );
 }
 
-function Btn({ children, bg, outline, onClick }: {
-  children: React.ReactNode; bg?: string; outline?: string; onClick: () => void;
+function Btn({ children, bg, outline, onClick, label }: {
+  children: React.ReactNode; bg?: string; outline?: string;
+  onClick: () => void; label?: string;
 }) {
   return (
-    <button onClick={onClick}
-      className="flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold transition-opacity hover:opacity-80"
+    <button onClick={onClick} aria-label={label}
+      className={`flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold${bg ? " btn-lift" : ""}`}
       style={bg
         ? { background: bg, color: "#fff" }
         : { border: `1px solid ${outline}`, color: outline === C.grid ? C.ink2 : outline }}>

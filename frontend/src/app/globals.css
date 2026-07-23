@@ -59,3 +59,57 @@ a:focus-visible,
   .btn-lift:not(:disabled):hover,
   .btn-lift:not(:disabled):active { transform: none; }
 }
+
+/* ── Skeleton shimmer (pengganti teks "Memuat…") ─────────────────── */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #1a1a19;
+  border-radius: 8px;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg,
+    transparent, #ffffff0e 40%, #ffffff14 50%, #ffffff0e 60%, transparent);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+
+/* ── Spinner mikro (dalam tombol / inline) ───────────────────────── */
+.spin {
+  display: inline-block;
+  border-radius: 9999px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* ── Fade-in konten (transisi antar-tab) ─────────────────────────── */
+.fade-in { animation: fadeIn 160ms ease-out both; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Pulse (marker rekomendasi berubah) ──────────────────────────── */
+.pulse-reco { animation: pulseReco 1.8s ease-in-out infinite; transform-origin: center; }
+@keyframes pulseReco {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* ── Toast masuk ─────────────────────────────────────────────────── */
+.toast-in { animation: toastIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after, .spin, .fade-in, .pulse-reco, .toast-in { animation: none; }
+  .fade-in { opacity: 1; transform: none; }
+}

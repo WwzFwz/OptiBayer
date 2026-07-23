@@ -3,6 +3,8 @@
 // (tulis langsung: nama, tag chart, isi) → langsung dipakai AI tanpa restart.
 import { useEffect, useState } from "react";
 import { addKnowledge, getKnowledge, KnowledgeDoc } from "@/lib/api";
+import { useToast } from "@/components/ui/Toast";
+import { Spinner } from "@/components/ui/Feedback";
 import { C } from "@/lib/theme";
 
 export default function Knowledge() {
@@ -18,6 +20,7 @@ export default function Knowledge() {
   const [extra, setExtra] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
 
   function reload() {
     getKnowledge().then((d) => { setDocs(d.docs); setCharts(d.charts); }).catch(() => {});
@@ -29,7 +32,10 @@ export default function Knowledge() {
     : docs;
 
   async function save() {
-    if (!name.trim() || !body.trim()) { setMsg("Nama & isi wajib diisi."); return; }
+    if (!name.trim() || !body.trim()) {
+      setMsg("Nama & isi wajib diisi."); toast("error", "Nama & isi wajib diisi.");
+      return;
+    }
     setBusy(true); setMsg(null);
     try {
       const r = await addKnowledge({
@@ -37,9 +43,10 @@ export default function Knowledge() {
         extra_tags: extra.split(",").map((s) => s.trim()).filter(Boolean),
       });
       setMsg(`Tersimpan: ${r.saved} — langsung dipakai AI.`);
+      toast("success", `Dokumen "${r.saved}" tersimpan — langsung dipakai AI.`);
       setName(""); setBody(""); setPicked([]); setExtra("");
       reload();
-    } catch (e) { setMsg(`Gagal: ${e}`); }
+    } catch (e) { setMsg(`Gagal: ${e}`); toast("error", `Gagal menyimpan: ${e}`); }
     finally { setBusy(false); }
   }
 
@@ -107,7 +114,8 @@ export default function Knowledge() {
           {Object.entries(charts).map(([id, label]) => {
             const on = picked.includes(id);
             return (
-              <button key={id} onClick={() => setPicked(on ? picked.filter((x) => x !== id) : [...picked, id])}
+              <button key={id} aria-pressed={on}
+                onClick={() => setPicked(on ? picked.filter((x) => x !== id) : [...picked, id])}
                 className="rounded-full px-2 py-1 text-xs"
                 style={{ border: `1px solid ${on ? C.accent : C.grid}`,
                          background: on ? C.accent + "22" : "transparent",
@@ -131,9 +139,9 @@ export default function Knowledge() {
           tag-nya beririsan; ubah tag = ubah pemakainya.
         </p>
         <button onClick={save} disabled={busy}
-          className="btn-lift w-full rounded-lg px-3 py-2 text-sm font-semibold"
+          className="btn-lift flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold"
           style={{ background: C.status.good, color: "#fff", opacity: busy ? 0.6 : 1 }}>
-          {busy ? "Menyimpan…" : "Simpan dokumen"}
+          {busy && <Spinner />}{busy ? "Menyimpan…" : "Simpan dokumen"}
         </button>
         {msg && <p className="mt-2 text-xs" style={{ color: msg.startsWith("Gagal") ? C.status.critical : C.status.good }}>{msg}</p>}
       </div>

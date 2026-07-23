@@ -5,6 +5,7 @@ import {
   Bar, BarChart, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { getSensitivity, postOp, Sensitivity } from "@/lib/api";
+import { Spinner } from "@/components/ui/Feedback";
 import { C } from "@/lib/theme";
 
 const OXIDES = [
@@ -78,9 +79,9 @@ export default function Lab() {
       </div>
 
       <button onClick={run} disabled={busy}
-        className="btn-lift rounded-lg px-4 py-2 font-semibold"
+        className="btn-lift inline-flex items-center gap-2 rounded-lg px-4 py-2 font-semibold"
         style={{ background: C.accent, color: "#1a1408", opacity: busy ? 0.6 : 1 }}>
-        {busy ? "Menghitung…" : "Prediksi (ML vs Fisika)"}
+        {busy && <Spinner />}{busy ? "Menghitung…" : "Prediksi (ML vs Fisika)"}
       </button>
 
       {sens && sens.out_of_bounds.length > 0 && (

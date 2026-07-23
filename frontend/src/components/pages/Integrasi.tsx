@@ -2,6 +2,7 @@
 // Integrasi — kontrak antarmuka + playground (panggil API sungguhan).
 import { useEffect, useState } from "react";
 import { API, getContract, postOp } from "@/lib/api";
+import { Spinner } from "@/components/ui/Feedback";
 import { C } from "@/lib/theme";
 
 type EP = { method: string; path: string; summary: string; consumer: string;
@@ -52,14 +53,28 @@ export default function Integrasi() {
                 <th className="p-1 text-left">Fungsi</th><th className="p-1 text-left">Konsumen</th>
               </tr></thead>
               <tbody>
-                {spec.endpoints.map((e, i) => (
-                  <tr key={i} style={{ borderTop: `1px solid ${C.grid}` }}>
-                    <td className="p-1" style={{ color: C.series[0] }}>{e.method}</td>
-                    <td className="p-1 font-mono">{e.path}</td>
-                    <td className="p-1">{e.summary}</td>
-                    <td className="p-1">{e.consumer}</td>
-                  </tr>
-                ))}
+                {spec.endpoints.map((e, i) => {
+                  // path /v1/optimize/pareto -> op "optimize/pareto"; /v1/predict -> "predict"
+                  const op = e.path.replace(/^\/v1\//, "");
+                  const playable = ops.some(([id]) => id === op);
+                  return (
+                    <tr key={i}
+                        onClick={playable ? () => {
+                          setSel(op);
+                          setPayload(e.example_payload
+                            ? JSON.stringify(e.example_payload, null, 2) : "{}");
+                        } : undefined}
+                        className={playable ? "cursor-pointer transition-colors hover:brightness-125" : ""}
+                        title={playable ? "Klik untuk memuat ke Playground" : undefined}
+                        style={{ borderTop: `1px solid ${C.grid}`,
+                                 background: playable && sel === op ? C.accent + "18" : undefined }}>
+                      <td className="p-1" style={{ color: C.accent }}>{e.method}</td>
+                      <td className="p-1 font-mono">{e.path}</td>
+                      <td className="p-1">{e.summary}</td>
+                      <td className="p-1">{e.consumer}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -75,9 +90,9 @@ export default function Integrasi() {
             {ops.map(([id, lbl]) => <option key={id} value={id}>{lbl}</option>)}
           </select>
           <button onClick={call} disabled={busy}
-            className="btn-lift rounded-lg px-3 py-1.5 text-sm font-semibold"
+            className="btn-lift inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold"
             style={{ background: C.accent, color: "#1a1408", opacity: busy ? 0.6 : 1 }}>
-            {busy ? "…" : "Panggil"}
+            {busy && <Spinner />}{busy ? "Memanggil…" : "Panggil"}
           </button>
         </div>
         <textarea value={payload} onChange={(e) => setPayload(e.target.value)}

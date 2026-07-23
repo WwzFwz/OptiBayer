@@ -8,6 +8,7 @@ import {
 import { getOperatingMap, getPareto, OperatingMap, ParetoData } from "@/lib/api";
 import ParallelCoords, { Dim } from "@/components/ParallelCoords";
 import ExplainAI from "@/components/ExplainAI";
+import { Spinner, EmptyState } from "@/components/ui/Feedback";
 import WhatIfDigesti from "@/components/WhatIfDigesti";
 import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
@@ -49,7 +50,7 @@ export default function Digesti() {
         <p className="mb-2 text-sm font-semibold" style={{ color: C.ink }}>
           Peta Operasi — Recovery = f(Suhu Digester × NaOH)
         </p>
-        {!map ? <p style={{ color: C.muted }}>Memuat peta…</p> : (
+        {!map ? <div className="skeleton" style={{ height: 300 }} role="status" aria-label="Memuat peta operasi…" /> : (
           <div className="overflow-x-auto">
             <svg viewBox={`0 0 ${map.temps.length * 26 + 60} ${map.naohs.length * 20 + 40}`}
                  className="w-full" style={{ maxHeight: 420 }}>
@@ -76,7 +77,7 @@ export default function Digesti() {
                   <text x={now.x} y={now.y} textAnchor="middle" fill={C.ink}
                         fontSize={15} fontWeight={900}>✕</text>
                   <text x={rec.x} y={rec.y} textAnchor="middle" fill={C.status.good}
-                        fontSize={16} fontWeight={900}>★</text>
+                        fontSize={16} fontWeight={900} className="pulse-reco">★</text>
                 </>);
               })()}
               <text x={map.temps.length * 13 + 50} y={map.naohs.length * 20 + 34}
@@ -106,15 +107,15 @@ export default function Digesti() {
             Kurva Pareto (carbon-aware) & Radar Setpoint
           </p>
           <button onClick={runPareto} disabled={loading}
-            className="btn-lift rounded-lg px-3 py-1.5 text-sm font-semibold"
+            className="btn-lift inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold"
             style={{ background: C.accent, color: "#1a1408", opacity: loading ? 0.6 : 1 }}>
-            {loading ? "Menghitung…" : "Hitung Pareto"}
+            {loading && <Spinner />}{loading ? "Menghitung…" : "Hitung Pareto"}
           </button>
         </div>
         {!pf ? (
-          <p className="text-sm" style={{ color: C.muted }}>
-            Klik "Hitung Pareto" untuk optimasi NSGA-II pada komposisi jam ini.
-          </p>
+          <EmptyState
+            title="Belum ada kurva Pareto"
+            hint='Klik "Hitung Pareto" untuk menjalankan optimasi NSGA-II carbon-aware pada komposisi bauksit jam ini.' />
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
             <ResponsiveContainer width="100%" height={280}>

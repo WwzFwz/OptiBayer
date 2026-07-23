@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { explainChart } from "@/lib/api";
+import { Spinner } from "@/components/ui/Feedback";
 import { C } from "@/lib/theme";
 
 export default function ExplainAI({ title, context, tags }: {
@@ -23,10 +24,11 @@ export default function ExplainAI({ title, context, tags }: {
 
   return (
     <div className="mt-2 rounded-lg" style={{ border: `1px solid ${C.grid}` }}>
-      <button onClick={() => setOpen(!open)}
+      <button onClick={() => setOpen(!open)} aria-expanded={open}
         className="flex w-full items-center gap-2 px-3 py-2 text-sm"
-        style={{ color: C.series[0] }}>
+        style={{ color: C.accent }}>
         <Sparkles size={15} /> Analisis AI — {title}
+        <span className="ml-auto text-xs" style={{ color: C.muted }}>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
         <div className="px-3 pb-3">
@@ -36,9 +38,9 @@ export default function ExplainAI({ title, context, tags }: {
               className="flex-1 rounded px-2 py-1.5 text-sm"
               style={{ background: C.page, color: C.ink, border: `1px solid ${C.grid}` }} />
             <button onClick={run} disabled={busy}
-              className="btn-lift rounded-lg px-3 py-1.5 text-sm font-semibold"
+              className="btn-lift inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold"
               style={{ background: C.accent, color: "#1a1408", opacity: busy ? 0.6 : 1 }}>
-              {busy ? "…" : "Analisis"}
+              {busy && <Spinner />}{busy ? "Menganalisis…" : "Analisis"}
             </button>
           </div>
           {ans && (

@@ -10,6 +10,7 @@ import ExplainAI from "@/components/ExplainAI";
 import HexRadar, { grade, HexMetric } from "@/components/HexRadar";
 import CorrelationPanel from "@/components/CorrelationPanel";
 import AuditTrail from "@/components/AuditTrail";
+import { Spinner, ChartSkeleton } from "@/components/ui/Feedback";
 import { useStore } from "@/lib/store";
 import { C, statusOf, Severity } from "@/lib/theme";
 
@@ -53,7 +54,16 @@ export default function Overview() {
   const [rg, setRg] = useState<RegretData | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (!seq) return <p style={{ color: C.muted }}>Memuat deret replay…</p>;
+  if (!seq) return (
+    <div className="grid gap-3 lg:grid-cols-2">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="rounded-xl p-3"
+             style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
+          <ChartSkeleton />
+        </div>
+      ))}
+    </div>
+  );
   // co2_capture_t turunan: 23 kg CO₂ / ton red mud (paper 2026)
   const data = seq.hours.map((h, i) => ({
     jam: i, ...h, co2_capture_t: +(h.red_mud_t * 0.023).toFixed(2),
@@ -152,9 +162,9 @@ export default function Overview() {
           Regret Meter — nilai yang tertinggal (8 jam terakhir)
         </p>
         <button onClick={runRegret} disabled={busy}
-          className="btn-lift rounded-lg px-3 py-1.5 text-sm font-semibold"
+          className="btn-lift inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold"
           style={{ background: C.accent, color: "#1a1408", opacity: busy ? 0.6 : 1 }}>
-          {busy ? "Menghitung…" : "Hitung Regret + Laporan"}
+          {busy && <Spinner />}{busy ? "Menghitung…" : "Hitung Regret + Laporan"}
         </button>
       </div>
       {!rg ? (
