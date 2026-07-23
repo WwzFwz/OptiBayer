@@ -14,6 +14,10 @@ export const C = {
     critical: "#d03b3b",
     info: "#3987e5",
   },
+  // aksen aksi (tombol) — emas keemasan, konsisten dgn HexRadar (BUKAN biru-chart)
+  accent: "#c9a24a",
+  accentHi: "#e6c063",
+  accentDim: "#2a1f12",
 } as const;
 
 export type Severity = keyof typeof C.status;

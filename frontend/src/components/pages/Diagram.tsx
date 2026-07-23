@@ -79,7 +79,7 @@ export default function Diagram() {
            ["karbon", "Jalur Karbon (CCUS)"]] as const).map(([id, lbl]) => (
           <button key={id} onClick={() => setLayer(id)}
             className="rounded-lg px-3 py-1.5 text-sm"
-            style={{ border: `1px solid ${layer === id ? C.series[0] : C.grid}`,
+            style={{ border: `1px solid ${layer === id ? C.accent : C.grid}`,
                      background: layer === id ? "#26262450" : "transparent",
                      color: layer === id ? C.ink : C.muted }}>
             {lbl}

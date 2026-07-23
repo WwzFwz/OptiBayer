@@ -109,8 +109,8 @@ export default function Knowledge() {
             return (
               <button key={id} onClick={() => setPicked(on ? picked.filter((x) => x !== id) : [...picked, id])}
                 className="rounded-full px-2 py-1 text-xs"
-                style={{ border: `1px solid ${on ? C.series[0] : C.grid}`,
-                         background: on ? "#3987e522" : "transparent",
+                style={{ border: `1px solid ${on ? C.accent : C.grid}`,
+                         background: on ? C.accent + "22" : "transparent",
                          color: on ? C.ink : C.muted }}>
                 {label}
               </button>
@@ -131,7 +131,7 @@ export default function Knowledge() {
           tag-nya beririsan; ubah tag = ubah pemakainya.
         </p>
         <button onClick={save} disabled={busy}
-          className="w-full rounded px-3 py-2 text-sm font-semibold"
+          className="btn-lift w-full rounded-lg px-3 py-2 text-sm font-semibold"
           style={{ background: C.status.good, color: "#fff", opacity: busy ? 0.6 : 1 }}>
           {busy ? "Menyimpan…" : "Simpan dokumen"}
         </button>

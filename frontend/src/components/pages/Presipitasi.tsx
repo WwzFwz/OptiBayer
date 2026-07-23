@@ -40,7 +40,7 @@ export default function Presipitasi() {
                  onChange={(e) => setA(Number(e.target.value))} className="flex-1 max-w-xs" />
           {ceq && (
             <span className="rounded-full px-3 py-1 text-xs font-semibold"
-                  style={{ background: "#3987e522", color: C.series[0] }}>
+                  style={{ background: C.accent + "22", color: C.series[0] }}>
               gap {ceq.gap.toFixed(1)} g/L
             </span>
           )}

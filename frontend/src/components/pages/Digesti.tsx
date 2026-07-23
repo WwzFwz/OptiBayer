@@ -106,8 +106,8 @@ export default function Digesti() {
             Kurva Pareto (carbon-aware) & Radar Setpoint
           </p>
           <button onClick={runPareto} disabled={loading}
-            className="rounded px-3 py-1.5 text-sm font-semibold"
-            style={{ background: C.series[0], color: "#fff", opacity: loading ? 0.6 : 1 }}>
+            className="btn-lift rounded-lg px-3 py-1.5 text-sm font-semibold"
+            style={{ background: C.accent, color: "#1a1408", opacity: loading ? 0.6 : 1 }}>
             {loading ? "Menghitung…" : "Hitung Pareto"}
           </button>
         </div>

@@ -55,13 +55,13 @@ export default function Advisory({ setPage }: { setPage: (p: PageId) => void }) 
       {/* drop-zone highlight saat drag */}
       {dragging && (
         <div className="pointer-events-none fixed inset-y-0 right-0 z-40"
-             style={{ width: 320, background: "#3987e522",
+             style={{ width: 320, background: C.accent + "22",
                       borderLeft: `2px dashed ${C.series[0]}` }} />
       )}
       {dragging && ghost && (
         <div className="pointer-events-none fixed z-50 rounded px-3 py-2 text-xs"
              style={{ left: ghost.x + 12, top: ghost.y + 12,
-                      background: C.surface, border: `1px solid ${C.series[0]}`,
+                      background: C.surface, border: `1px solid ${C.accent}`,
                       color: C.ink }}>
           Lepas di tepi kanan → panel kanan · di tengah → atas
         </div>
@@ -114,7 +114,7 @@ export default function Advisory({ setPage }: { setPage: (p: PageId) => void }) 
               {Array.from({ length: nPages }, (_, k) => (
                 <button key={k} onClick={() => setPageIdx(k)}
                   className="h-2 w-2 rounded-full"
-                  style={{ background: k === pi ? C.series[0] : C.grid }}
+                  style={{ background: k === pi ? C.accent : C.grid }}
                   aria-label={`halaman ${k + 1}`} />
               ))}
             </div>

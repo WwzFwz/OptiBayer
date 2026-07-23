@@ -78,8 +78,8 @@ export default function Lab() {
       </div>
 
       <button onClick={run} disabled={busy}
-        className="rounded-lg px-4 py-2 font-semibold"
-        style={{ background: C.series[0], color: "#fff", opacity: busy ? 0.6 : 1 }}>
+        className="btn-lift rounded-lg px-4 py-2 font-semibold"
+        style={{ background: C.accent, color: "#1a1408", opacity: busy ? 0.6 : 1 }}>
         {busy ? "Menghitung…" : "Prediksi (ML vs Fisika)"}
       </button>
 

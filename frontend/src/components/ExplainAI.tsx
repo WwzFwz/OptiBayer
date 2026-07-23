@@ -36,8 +36,8 @@ export default function ExplainAI({ title, context, tags }: {
               className="flex-1 rounded px-2 py-1.5 text-sm"
               style={{ background: C.page, color: C.ink, border: `1px solid ${C.grid}` }} />
             <button onClick={run} disabled={busy}
-              className="rounded px-3 py-1.5 text-sm font-semibold"
-              style={{ background: C.series[0], color: "#fff", opacity: busy ? 0.6 : 1 }}>
+              className="btn-lift rounded-lg px-3 py-1.5 text-sm font-semibold"
+              style={{ background: C.accent, color: "#1a1408", opacity: busy ? 0.6 : 1 }}>
               {busy ? "…" : "Analisis"}
             </button>
           </div>

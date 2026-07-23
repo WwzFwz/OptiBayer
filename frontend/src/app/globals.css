@@ -11,4 +11,51 @@ body {
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: #2c2c2a; border-radius: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-input[type="range"] { accent-color: #3987e5; }
+input[type="range"] { accent-color: #c9a24a; }
+
+/* ── Interaksi mikro tombol ──────────────────────────────────────────
+   Semua <button> mendapat transisi halus, hover-lift, press-feedback,
+   dan focus-ring aksesibel. Prinsip: umpan balik <120ms, gerak halus
+   (≤1px), ring keyboard yang jelas tapi tidak mengganggu mouse-user. */
+button {
+  cursor: pointer;
+  transition: transform 110ms ease, box-shadow 160ms ease,
+              background-color 160ms ease, border-color 160ms ease,
+              filter 160ms ease, opacity 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+button:not(:disabled):hover { filter: brightness(1.06); }
+button:not(:disabled):active { transform: translateY(0.5px) scale(0.985); }
+button:disabled { cursor: not-allowed; }
+
+/* Fokus keyboard saja (bukan klik mouse) — ring emas lembut. */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #0d0d0d, 0 0 0 4px #c9a24a88;
+}
+
+/* Tombol aksi utama: sedikit terangkat saat hover (afordансi "bisa diklik"). */
+.btn-lift:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px -4px #c9a24a66;
+}
+.btn-lift:not(:disabled):active {
+  transform: translateY(0) scale(0.985);
+  box-shadow: 0 2px 6px -3px #c9a24a55;
+}
+
+/* Kartu interaktif (chart/card yang bisa diklik untuk lompat jam). */
+.card-hover { transition: border-color 160ms ease, box-shadow 160ms ease; }
+.card-hover:hover {
+  border-color: #c9a24a55 !important;
+  box-shadow: 0 6px 20px -10px #00000080;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button, .btn-lift, .card-hover { transition: none; }
+  button:not(:disabled):active,
+  .btn-lift:not(:disabled):hover,
+  .btn-lift:not(:disabled):active { transform: none; }
+}

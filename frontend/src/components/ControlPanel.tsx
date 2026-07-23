@@ -79,7 +79,7 @@ export default function ControlPanel() {
               onClick={() => s.setDock(d)}
               className="flex-1 rounded py-2 text-sm capitalize"
               style={{
-                border: `1px solid ${s.dock === d ? C.series[0] : C.grid}`,
+                border: `1px solid ${s.dock === d ? C.accent : C.grid}`,
                 background: s.dock === d ? "#26262450" : "transparent",
                 color: s.dock === d ? C.ink : C.muted,
               }}

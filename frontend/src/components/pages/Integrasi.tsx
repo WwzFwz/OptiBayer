@@ -75,8 +75,8 @@ export default function Integrasi() {
             {ops.map(([id, lbl]) => <option key={id} value={id}>{lbl}</option>)}
           </select>
           <button onClick={call} disabled={busy}
-            className="rounded px-3 py-1.5 text-sm font-semibold"
-            style={{ background: C.series[0], color: "#fff", opacity: busy ? 0.6 : 1 }}>
+            className="btn-lift rounded-lg px-3 py-1.5 text-sm font-semibold"
+            style={{ background: C.accent, color: "#1a1408", opacity: busy ? 0.6 : 1 }}>
             {busy ? "…" : "Panggil"}
           </button>
         </div>

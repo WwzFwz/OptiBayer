@@ -94,8 +94,9 @@ export default function Overview() {
 
     <div className="grid gap-3 lg:grid-cols-2">
       {CHARTS.map(({ key, title, color, band }) => (
-        <div key={key} className="rounded-xl p-3"
-             style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
+        <div key={key} className="card-hover rounded-xl p-3"
+             style={{ background: C.surface, border: `1px solid ${C.grid}` }}
+             title="klik chart untuk melompat ke jam tersebut">
           <p className="mb-2 text-sm font-semibold" style={{ color: C.ink }}>{title}</p>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={data}
@@ -151,8 +152,8 @@ export default function Overview() {
           Regret Meter — nilai yang tertinggal (8 jam terakhir)
         </p>
         <button onClick={runRegret} disabled={busy}
-          className="rounded px-3 py-1.5 text-sm font-semibold"
-          style={{ background: C.series[0], color: "#fff", opacity: busy ? 0.6 : 1 }}>
+          className="btn-lift rounded-lg px-3 py-1.5 text-sm font-semibold"
+          style={{ background: C.accent, color: "#1a1408", opacity: busy ? 0.6 : 1 }}>
           {busy ? "Menghitung…" : "Hitung Regret + Laporan"}
         </button>
       </div>
