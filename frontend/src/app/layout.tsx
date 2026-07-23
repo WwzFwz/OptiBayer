@@ -13,9 +13,14 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // suppressHydrationWarning: ekstensi browser (mis. Bitdefender `bis_register`,
+  // Grammarly, dsb.) menyuntik atribut ke <html>/<body> SEBELUM React hydrate,
+  // memicu warning mismatch palsu. Ini cara resmi Next/React menanganinya
+  // (lihat next docs "preventing-flash-before-hydration") — bukan menutupi bug
+  // kita; atribut itu bukan dari kode kita.
   return (
-    <html lang="id" className="h-full antialiased">
-      <body className="min-h-full">
+    <html lang="id" className="h-full antialiased" suppressHydrationWarning>
+      <body className="min-h-full" suppressHydrationWarning>
         <StoreProvider>{children}</StoreProvider>
       </body>
     </html>
