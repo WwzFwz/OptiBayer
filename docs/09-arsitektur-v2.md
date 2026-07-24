@@ -3,6 +3,10 @@
 > Revisi arsitektur doc 03/06 setelah info kunci: **data asli yang lebih lengkap datang
 > di tahap berikutnya**. Prinsip utama v2: *semua yang tahu tentang bentuk data
 > dikurung di satu tempat; sisanya bekerja pada skema kanonik.*
+>
+> 🗺️ **Versi visual (diagram Mermaid) dari dokumen ini:
+> [20-diagram-arsitektur.md](20-diagram-arsitektur.md)** — konteks sistem,
+> headless, alur data, neuro-symbolic, capability, sequence advisory.
 
 ## 1. Prinsip arsitektur (kenapa v2 berbeda dari v1)
 

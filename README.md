@@ -95,7 +95,7 @@ Inti Python ────────┤─ Next.js + React (frontend/)   ── 
 
 ```
 antam-hackathon/
-├── docs/                      ← 01–18 (analisis, arsitektur, deploy, laporan teknis)
+├── docs/                      ← 01–20 (analisis, arsitektur, deploy, laporan, diagram)
 ├── data/raw/data.csv          ← data (jangan diedit; ekspor asli diarsip)
 ├── data/calculator/           ← kalkulator xlsm (sumber mass_balance)
 ├── knowledge/                 ← dokumen expert ber-tag (Knowledge Pack)
@@ -116,6 +116,7 @@ antam-hackathon/
 > 📖 Setup 5 menit + tur fitur + troubleshooting: **[docs/13-panduan-setup.md](docs/13-panduan-setup.md)**
 > · Deploy (juri dapat link): **[docs/16-tutorial-deploy.md](docs/16-tutorial-deploy.md)**
 > · Laporan teknis (metode + diagram): **[docs/17-laporan-teknis.md](docs/17-laporan-teknis.md)**
+> · 🗺️ **Diagram arsitektur visual (Mermaid): [docs/20-diagram-arsitektur.md](docs/20-diagram-arsitektur.md)**
 
 ## Mulai dari mana?
 
