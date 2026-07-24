@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { getSensitivity, postOp, Sensitivity } from "@/lib/api";
 import { Spinner } from "@/components/ui/Feedback";
+import { useToast } from "@/components/ui/Toast";
 import { C } from "@/lib/theme";
 
 const OXIDES = [
@@ -36,6 +37,7 @@ export default function Lab() {
   const [phys, setPhys] = useState<Record<string, number> | null>(null);
   const [sens, setSens] = useState<Sensitivity | null>(null);
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
 
   const sum9 = Object.values(comp).reduce((a, b) => a + b, 0);
   const others = 100 - sum9;
@@ -50,6 +52,8 @@ export default function Lab() {
         getSensitivity(full, knobs),
       ]);
       setMl(p1.result); setPhys(p2.result); setSens(s);
+    } catch (e) {
+      toast("error", `Gagal menghitung — cek backend (port 8000). ${e}`);
     } finally { setBusy(false); }
   }
 

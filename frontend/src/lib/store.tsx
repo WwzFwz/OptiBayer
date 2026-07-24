@@ -48,16 +48,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [hourData, setHourData] = useState<HourData | null>(null);
   const [loadingHour, setLoadingHour] = useState(false);
   const [apiDown, setApiDown] = useState(false);
-  const [dock, setDockRaw] = useState<Dock>("right");
+  // preferensi dock dibaca sekali via lazy initializer (bukan efek) — hindari
+  // setState-in-effect & flicker. Guard SSR: localStorage tak ada di server.
+  const [dock, setDockRaw] = useState<Dock>(() => {
+    if (typeof window === "undefined") return "right";
+    const saved = window.localStorage.getItem("optibayer.dock");
+    return saved === "right" || saved === "top" ? saved : "right";
+  });
   const [panelOpen, setPanelOpen] = useState(false);
   const [decisions, setDecisions] = useState<Record<string, "terima" | "tolak">>({});
   const reqId = useRef(0);
 
-  // preferensi dock tersimpan antar sesi
-  useEffect(() => {
-    const saved = localStorage.getItem("optibayer.dock");
-    if (saved === "right" || saved === "top") setDockRaw(saved);
-  }, []);
   const setDock = useCallback((d: Dock) => {
     setDockRaw(d);
     localStorage.setItem("optibayer.dock", d);
@@ -81,6 +82,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // data jam aktif: fast saat playing, full saat pause
   useEffect(() => {
     const id = ++reqId.current;
+    // sinkronisasi state loading dgn efek fetch eksternal — memang disengaja
+    // (pola "synchronize with external system", bukan turunan state lain).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingHour(true);
     getHour(scenario, hour, playing)
       .then((d) => {

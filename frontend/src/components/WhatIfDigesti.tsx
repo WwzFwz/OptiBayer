@@ -20,7 +20,11 @@ export default function WhatIfDigesti({ map }: { map: OperatingMap }) {
   const [pred, setPred] = useState<Record<string, number> | null>(null);
   const base = map.knobs_now;
 
-  useEffect(() => { setKnobs(map.knobs_now); }, [map]);
+  // reset knob saat jam replay (map) berganti — dilakukan SAAT RENDER (pola
+  // resmi React "adjusting state when a prop changes"), bukan via efek, agar
+  // tak ada render ekstra & bebas peringatan set-state-in-effect.
+  const [prevMap, setPrevMap] = useState(map);
+  if (prevMap !== map) { setPrevMap(map); setKnobs(map.knobs_now); }
 
   useEffect(() => {
     let alive = true;

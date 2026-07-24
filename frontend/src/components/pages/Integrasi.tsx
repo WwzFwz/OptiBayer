@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { API, getContract, postOp } from "@/lib/api";
 import { Spinner } from "@/components/ui/Feedback";
+import { useToast } from "@/components/ui/Toast";
 import { C } from "@/lib/theme";
 
 type EP = { method: string; path: string; summary: string; consumer: string;
@@ -14,6 +15,7 @@ export default function Integrasi() {
   const [payload, setPayload] = useState("{}");
   const [res, setRes] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     getContract().then((d) => setSpec(d as never)).catch(() => {});
@@ -30,7 +32,10 @@ export default function Integrasi() {
     try {
       const p = JSON.parse(payload || "{}");
       setRes(await postOp(sel, p));
-    } catch (e) { setRes({ error: String(e) }); }
+    } catch (e) {
+      setRes({ error: String(e) });
+      toast("error", `Panggilan gagal: ${e}`);
+    }
     finally { setBusy(false); }
   }
 

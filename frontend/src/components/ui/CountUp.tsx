@@ -19,6 +19,9 @@ export default function CountUp({ value, format }: {
   const raf = useRef<number>(0);
 
   useEffect(() => {
+    // sinkronisasi angka tampil dgn jam paint browser (requestAnimationFrame)
+    // — ini justru kegunaan sah useEffect ("subscribe to external system").
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (reduced()) { setDisp(value); return; }
     const start = performance.now();
     const a = from.current, b = value;
