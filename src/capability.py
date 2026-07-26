@@ -46,6 +46,12 @@ def detect(df: pd.DataFrame) -> dict[str, bool]:
             for c in ("al_feed_t", "hydrate_t", "al_lost_redmud_t", "al_recycled_t")
         ),
         "replay": len(df) > 10,
+        # Dimensi waktu (doc 14 A2): data sintesis = 1000 skenario steady-state
+        # yang saling bebas, jadi OFF. Begitu historian nyata masuk dgn kolom
+        # waktu, ini menyala dan tetapan inersia bisa DIIDENTIFIKASI dari data
+        # (src/physics/dynamics.tetapan_dari_data) alih-alih diasumsikan.
+        "time_series": any(c in df.columns for c in
+                           ("timestamp", "waktu", "datetime")) and len(df) > 10,
     }
 
 

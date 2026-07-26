@@ -331,6 +331,70 @@ def sensitivity(payload: dict = Body(...)) -> dict:
     }
 
 
+@app.get("/v1/dynamics", tags=["frontend"],
+         summary="Lintasan respons setpoint: kapan rekomendasi mulai terasa")
+def dynamics_curve(scenario_id: int, hour: int) -> dict:
+    """Kurva inersia dari kondisi sekarang ke kondisi rekomendasi.
+
+    Menjawab pertanyaan yang selalu muncul di ruang kontrol: "kalau saya setel
+    sekarang, kapan angkanya berubah?" Semua model lain menjawab kondisi
+    MANTAP saja (doc 14 A2).
+    """
+    from src import schema
+    from src.models import predict
+    from src.models import verify as _verify
+    from src.physics import dynamics
+
+    seq = _sequence(scenario_id)
+    row = seq.iloc[max(0, min(hour, len(seq) - 1))]
+    comp = predict.composition_of(row)
+    _, picked = _pareto_hour(scenario_id, hour)
+    reco_knobs = {k: float(picked[k]) for k in schema.KNOBS}
+
+    awal = _verify.physics_targets(comp, predict.knobs_of(row))
+    mantap = _verify.physics_targets(comp, reco_knobs)
+    kurva = dynamics.respons_banyak(awal, mantap)
+
+    return {
+        "sumber_tetapan": dynamics.SUMBER_TETAPAN,
+        "peringatan": (
+            "Tetapan waktu adalah asumsi engineering dari orde besaran unit "
+            "Bayer, BUKAN hasil identifikasi dari data — data latih tidak "
+            "punya sumbu waktu (doc 14 A2)."
+        ),
+        "ringkasan": dynamics.ringkasan(awal, mantap),
+        "kurva": {
+            t: {
+                "label": schema.label(t),
+                "awal": round(r.awal, 3),
+                "mantap": round(r.mantap, 3),
+                "dead_time_jam": r.dead_time_jam,
+                "tetapan_jam": r.tetapan_jam,
+                "t95_jam": round(r.t95_jam, 2),
+                "titik": r.titik,
+            }
+            for t, r in kurva.items()
+        },
+    }
+
+
+@app.get("/v1/active-learning", tags=["frontend"],
+         summary="Titik uji paling bernilai untuk pengambilan data tahap 2")
+def active_learning(n: int = 10, kandidat: int = 200) -> dict:
+    """Model menunjuk sendiri di mana ia paling tidak yakin (doc 12 I9).
+
+    Semua usulan dijamin berada di dalam amplop operasi aman — sistem tidak
+    pernah menyarankan pabrik keluar batas demi mengumpulkan data.
+    """
+    from src.models import active
+
+    if not 1 <= n <= 50:
+        raise HTTPException(400, "n harus 1..50")
+    if not 20 <= kandidat <= 2000:
+        raise HTTPException(400, "kandidat harus 20..2000")
+    return active.usulkan(n=n, n_kandidat=kandidat)
+
+
 @app.get("/v1/model/health", tags=["meta"],
          summary="Kesehatan model: metrik CV, interval konformal, cakupan")
 def model_health() -> dict:

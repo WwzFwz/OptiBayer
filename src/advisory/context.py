@@ -11,7 +11,7 @@ import pandas as pd
 from src import schema
 from src.models import explain, predict, registry, verify
 from src.optimize import pareto
-from src.physics import carbonation, na_balance
+from src.physics import carbonation, dynamics, na_balance
 
 SILIKA_WARNING = 5.5
 SILIKA_CRITICAL = 6.3
@@ -81,6 +81,11 @@ def build(row: pd.Series, history: pd.DataFrame | None = None,
     except Exception:
         fisika_now, fisika_reco, delta_fisika = {}, {}, {}
 
+    # Berapa lama sampai perubahan itu terasa? Semua model di sini menjawab
+    # kondisi MANTAP; tanpa ini, layar seolah menjanjikan hasil seketika
+    # (doc 14 A2). Tetapan waktunya asumsi engineering & ditandai demikian.
+    dinamika = dynamics.ringkasan(fisika_now, fisika_reco)
+
     return {
         "fast": fast,
         "composition": comp,
@@ -104,6 +109,7 @@ def build(row: pd.Series, history: pd.DataFrame | None = None,
         "delta_basis": "neraca massa eksak" if delta_fisika else "selisih prediksi ML",
         "fisika_now": fisika_now,
         "fisika_if_followed": fisika_reco,
+        "dinamika": dinamika,
         "shap_factors": factors,
         "na_balance": na_balance.breakdown(row),
         "cao_advisory": na_balance.cao_advisory(row),

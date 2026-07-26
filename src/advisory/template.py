@@ -30,6 +30,20 @@ def _fmt_interval(ctx: dict, target: str, desimal: int = 1) -> str:
     return f"±{iv['half']:.{desimal}f} (interval {iv['level']:.0%})"
 
 
+def _fmt_dinamika(ctx: dict) -> str:
+    """Sisipan waktu: angka di kartu adalah kondisi MANTAP, bukan seketika.
+
+    Tanpa ini operator wajar membaca "recovery +1.3 pp" sebagai sesuatu yang
+    terjadi begitu tombol ditekan — padahal digester & presipitator punya
+    inersia berjam-jam (doc 14 A2).
+    """
+    dyn = ctx.get("dinamika") or {}
+    if not dyn.get("tersedia"):
+        return ""
+    return (f" — nilai MANTAP, terasa mulai ~{dyn['dead_time_jam']:.1f} jam, "
+            f"tercapai ~{dyn['t95_jam']:.0f} jam")
+
+
 def _confidence(ctx: dict, target: str = "recovery_pct", desimal: int = 1) -> str:
     """Label kepercayaan BERBASIS UKURAN: interval konformal + status guard.
 
@@ -102,7 +116,7 @@ def cards(ctx: dict) -> list[dict]:
                 "impact": (
                     f"Jika rekomendasi diikuti: recovery {d['recovery_pct']:+.1f}%, "
                     f"OPEX {d['total_opex']:+.0f}/jam, red mud {d['red_mud_t']:+.1f} t "
-                    f"({ctx.get('delta_basis', 'model')})"
+                    f"({ctx.get('delta_basis', 'model')}){_fmt_dinamika(ctx)}"
                 ),
                 "action": f"Sesuaikan setpoint → {_fmt_knobs(ctx['recommended_knobs'])}",
                 "why": why,
