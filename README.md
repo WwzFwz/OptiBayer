@@ -126,7 +126,7 @@ Inti Python ────────┤─ MCP server (agen AI)        ── sr
 
 ```
 antam-hackathon/
-├── docs/                      ← 01–20 (analisis, arsitektur, deploy, laporan, diagram)
+├── docs/                      ← 01–22 (analisis, arsitektur, benchmark, deploy, laporan)
 ├── data/raw/data.csv          ← data (jangan diedit; ekspor asli diarsip)
 ├── data/calculator/           ← kalkulator xlsm (sumber mass_balance)
 ├── knowledge/                 ← dokumen expert ber-tag (Knowledge Pack)

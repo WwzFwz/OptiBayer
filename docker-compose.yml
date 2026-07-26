@@ -10,10 +10,16 @@ services:
     build: .
     image: optibayer-api
     ports:
-      - "8000:8000"
+      # Port HOST bisa diganti kalau bentrok dgn proyek lain:
+      #   API_PORT=8100 WEB_PORT=3200 docker compose up
+      - "${API_PORT:-8000}:8000"
     environment:
-      # Asal frontend yang boleh memanggil API (lihat CORS di src/integration/api.py)
-      CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+      # Asal frontend yang boleh memanggil API (lihat CORS di src/integration/api.py).
+      # IKUT WEB_PORT secara otomatis. Ini penting: kalau nilainya dipaku ke 3000
+      # sementara seseorang menyalakan UI di port lain karena bentrok, halaman
+      # tetap terbuka tapi SEMUA data kosong dengan status "API terputus" —
+      # gagal senyap yang sulit didiagnosis saat demo.
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:${WEB_PORT:-3000},http://127.0.0.1:${WEB_PORT:-3000}}"
       # Isi kalau instance ini dipublikasikan: endpoint tulis akan menuntut
       # header X-Write-Token yang sama.
       # OPTIBAYER_WRITE_TOKEN: "ganti-saya"
@@ -31,12 +37,21 @@ services:
     build:
       context: ./frontend
       args:
-        # Dipakai browser pengguna, jadi harus alamat yang bisa dijangkau dari
-        # HOST — bukan nama service internal 'api'.
+        # Cadangan yang DITANAM saat build (lib/api.ts memakainya kalau env
+        # runtime di bawah tidak diisi).
         NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://localhost:8000}"
     image: optibayer-web
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3000}:3000"
+    environment:
+      # Alamat API dibaca SAAT RUNTIME (disuntik server ke halaman lewat
+      # app/layout.tsx), sama seperti render.yaml. Artinya alamat backend bisa
+      # diganti cukup dengan restart container — tanpa build ulang image.
+      #
+      # Harus alamat yang bisa dijangkau dari BROWSER pengguna, bukan nama
+      # service internal 'api': permintaan berangkat dari mesin pengguna,
+      # bukan dari dalam jaringan compose.
+      OPTIBAYER_API_URL: "${OPTIBAYER_API_URL:-http://localhost:8000}"
     depends_on:
       api:
         condition: service_healthy

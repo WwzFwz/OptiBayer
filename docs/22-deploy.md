@@ -73,8 +73,36 @@ identitas penekan tombol seharusnya ikut tercatat di kolom `sumber`.
 docker compose up --build
 ```
 
-API di `:8000`, UI di `:3000`. Untuk dipakai perangkat lain di jaringan yang
-sama, jalankan dengan alamat host:
+API di `:8000`, UI di `:3000`. Sudah diuji ujung-ke-ujung: API menyala lebih
+dulu, `healthcheck`-nya lulus, baru frontend dinyalakan (`depends_on:
+service_healthy`) — jadi tidak ada jendela waktu di mana UI terbuka tapi
+backend belum siap. Model dilatih saat build image (~14 dtk), bukan saat start.
+
+### Kalau portnya bentrok
+
+Sangat mungkin terjadi — 3000 adalah port paling ramai di laptop pengembang.
+Ganti port HOST-nya:
+
+```bash
+WEB_PORT=3200 API_PORT=8100 docker compose up --build
+```
+
+`CORS_ORIGINS` mengikuti `WEB_PORT` **otomatis**, dan ini bukan kenyamanan
+belaka: kalau keduanya tidak seiring, halaman tetap terbuka normal tetapi
+seluruh datanya kosong dengan status "API terputus" — gagal senyap yang mudah
+disangka backend mati padahal backend sehat. Kalau melihat gejala itu,
+periksa `CORS_ORIGINS` lebih dulu:
+
+```bash
+docker compose exec api sh -c 'echo $CORS_ORIGINS'    # harus memuat port UI
+curl -H "Origin: http://localhost:<WEB_PORT>" -D - -o /dev/null \
+     http://localhost:<API_PORT>/v1/health | grep -i access-control
+```
+
+Baris `access-control-allow-origin` harus muncul. Kalau kosong, browser
+memblokir — bukan backendnya yang mati.
+
+### Untuk perangkat lain di jaringan yang sama
 
 ```bash
 OPTIBAYER_API_URL="http://<IP-laptop>:8000" \
