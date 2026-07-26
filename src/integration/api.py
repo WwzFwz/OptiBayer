@@ -84,14 +84,21 @@ def spec() -> dict:
 def _register(ep: dict) -> None:
     path = ep["path"].split("?")[0]
 
-    def handler(payload: dict = Body(
-        default={}, description="Kosongkan utk memakai contoh payload kontrak"
-    )) -> dict:
+    _body = Body(
+        default={},
+        description="Kosongkan utk memakai contoh payload kontrak",
+    )
+
+    def handler(payload: dict = _body) -> dict:
         try:
             result, ms = contract.call(ep["id"], payload or ep["example"])
         except Exception as e:  # kontrak read-only: aman diteruskan ke klien
-            raise HTTPException(status_code=400,
-                                detail=f"{type(e).__name__}: {e}")
+            # `from e` dipertahankan supaya akar penyebab tetap terlihat di log
+            # server, walau klien hanya menerima ringkasannya.
+            raise HTTPException(
+                status_code=400,
+                detail=f"{type(e).__name__}: {e}",
+            ) from e
         return {"ok": True, "latency_ms": round(ms, 1), "result": result}
 
     handler.__name__ = f"op_{ep['id']}"
@@ -267,7 +274,7 @@ def correlation(target: str = "recovery_pct", feature: str = "reactive_sio2_pct"
     # scatter untuk satu fitur terpilih (subsample utk ringan)
     sub = df.sample(min(300, len(df)), random_state=1)
     scatter = [{"x": round(float(a), 2), "y": round(float(b), 2)}
-               for a, b in zip(sub[feature], sub[target])]
+               for a, b in zip(sub[feature], sub[target], strict=False)]
     return {
         "target": target, "target_label": schema.label(target),
         "feature": feature, "feature_label": schema.label(feature),
@@ -300,7 +307,7 @@ def sensitivity(payload: dict = Body(...)) -> dict:
         kdf[k] = xs
         ys = predict.predict_frame(predict.frame(comp, kdf))[target]
         curves[k] = [{"x": round(float(x), 2), "y": round(float(y), 3)}
-                     for x, y in zip(xs, ys)]
+                     for x, y in zip(xs, ys, strict=False)]
         deltas[k] = round(float(ys.iloc[-1] - ys.iloc[0]), 3)
 
     # peringatan ekstrapolasi (out-of-domain vs rentang data latih)
@@ -442,21 +449,25 @@ def _label(col: str) -> str:
 
 @app.post("/v1/audit/decision", tags=["frontend"],
           summary="Catat keputusan advisory operator (audit trail persisten)")
-def audit_decision(payload: dict = Body(...),
-                   x_write_token: str = Header(default="")) -> dict:
-    """Satu-satunya cara frontend React mencatat keputusan terima/tolak.
+def audit_decision(payload: dict = Body(...)) -> dict:
+    """Satu-satunya cara frontend mencatat keputusan terima/tolak.
 
     Tanpa endpoint ini, keputusan di React hanya hidup di memori browser dan
-    hilang saat refresh — sementara halaman Audit Trail hanya menampilkan
-    keputusan dari Streamlit. Formatnya identik karena penulisnya sama
-    (src/advisory/audit.py).
+    hilang saat refresh. Formatnya identik dgn jalur lain karena penulisnya
+    sama (src/advisory/audit.py).
+
+    KENAPA TIDAK DILINDUNGI TOKEN — sementara /v1/knowledge/add dilindungi?
+    Aplikasi ini belum punya login, jadi token apa pun yang dikirim ke browser
+    ikut terbaca siapa saja yang membuka halaman: memasangnya di sini hanya
+    keamanan pura-pura, sambil memastikan tombol Terima/Tolak SELALU 401 di
+    konfigurasi produksi yang kita sarankan sendiri. Risikonya juga berbeda
+    jauh: endpoint ini hanya menambah baris dgn bentuk tetap (jam, judul,
+    keputusan) yang panjangnya dibatasi, sedangkan knowledge/add menulis
+    BERKAS berisi teks bebas ke disk server. Saat sistem autentikasi nyata
+    dipasang (AD/API-key per operator, doc 07), identitas penekan tombol
+    seharusnya ikut tercatat di kolom `sumber`.
     """
     from src.advisory import audit
-
-    expected = os.environ.get("OPTIBAYER_WRITE_TOKEN", "").strip()
-    if expected and x_write_token != expected:
-        raise HTTPException(
-            401, "Header X-Write-Token salah/absen (endpoint tulis dilindungi)")
 
     judul = (payload.get("title") or "").strip()
     keputusan = (payload.get("decision") or "").strip()

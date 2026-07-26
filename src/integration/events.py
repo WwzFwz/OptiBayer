@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Protocol
 
 TOPIK_ADVISORY_CRITICAL = "optibayer/advisory/critical"
@@ -122,7 +122,7 @@ def sink_dari_env() -> Sink:
 
 # -------------------------------------------------------------------- bus
 def _sekarang() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 class Bus:

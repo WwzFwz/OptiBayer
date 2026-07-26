@@ -47,7 +47,7 @@ SERVER_INFO = {"name": "optibayer", "version": "1.0.0"}
 def _json_type(value: Any) -> dict:
     if isinstance(value, bool):
         return {"type": "boolean"}
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return {"type": "number"}
     if isinstance(value, str):
         return {"type": "string"}

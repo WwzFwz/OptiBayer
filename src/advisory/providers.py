@@ -169,7 +169,7 @@ def _template_explain(context: dict) -> str:
         for k, v in d.items():
             if isinstance(v, dict):
                 items += _flat(v, f"{prefix}{k}.")
-            elif isinstance(v, (int, float, str)):
+            elif isinstance(v, int | float | str):
                 items.append((f"{prefix}{k}", v))
         return items
 

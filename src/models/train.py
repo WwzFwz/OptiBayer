@@ -1,22 +1,24 @@
-"""Pipeline pelatihan model surrogate LightGBM (P4, doc 09/11).
+"""Pipeline pelatihan model surrogate (P4, doc 09/11).
 
 Untuk setiap target di `schema.TARGETS` (recovery_pct, total_opex, red_mud_t,
 precip_yield_pct):
 
 1. Susun fitur X = df[schema.FEATURES] (10 komposisi + 5 parameter proses,
    TANPA kolom intermediate — anti data-leakage, lihat schema.py) dan y = target.
-2. 5-fold cross-validation (out-of-fold prediction) dengan LightGBM Regressor
-   -> cv_r2, cv_mae, cv_resid_std (dipakai src.models.predict.anomaly()).
+2. ADU beberapa keluarga model (FAMILIES) dengan fold yang sama; pemenangnya
+   MAE cross-validation terkecil di antara yang lolos anggaran kecepatan.
+   Skor semua pesaing disimpan supaya keputusannya bisa diaudit (doc 14 C2,
+   bukti di docs/21).
 3. Kuantil KONFORMAL dari residual out-of-fold -> interval prediksi bergaransi
    cakupan (doc 14 C1), dipakai src.models.predict.interval().
 4. Latih model final di seluruh data, simpan lewat src.models.registry.save().
-5. Tulis models/metrics.json gabungan (dibaca README/dashboard).
+5. Tulis models/metrics.json gabungan (dibaca README & endpoint /v1/model/health).
 
 CLI:
     python -m src.models.train --data data/raw/data.csv --splits 5
 
-Dipanggil juga langsung dari app/main.py saat registry kosong (auto-train
-sekali di startup), dan dari UI "Latih Ulang Model" (app/views/prediction_lab.py).
+Dipanggil juga saat build image Docker, supaya permintaan pertama tidak
+menunggu pelatihan.
 """
 
 from __future__ import annotations
@@ -44,19 +46,19 @@ MIN_ROWS_FOR_CV = 30
 # Hyperparameter LightGBM — konservatif relatif thd ukuran data (~1000 baris,
 # 15 fitur) supaya tidak overfit: pohon dangkal, jumlah daun kecil, subsample
 # baris/kolom, dan L2 ringan.
-LGBM_PARAMS: dict = dict(
-    n_estimators=400,
-    learning_rate=0.045,
-    max_depth=5,
-    num_leaves=24,
-    min_child_samples=8,
-    subsample=0.85,
-    subsample_freq=1,
-    colsample_bytree=0.85,
-    reg_lambda=0.5,
-    random_state=42,
-    verbosity=-1,
-)
+LGBM_PARAMS: dict = {
+    "n_estimators": 400,
+    "learning_rate": 0.045,
+    "max_depth": 5,
+    "num_leaves": 24,
+    "min_child_samples": 8,
+    "subsample": 0.85,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.85,
+    "reg_lambda": 0.5,
+    "random_state": 42,
+    "verbosity": -1,
+}
 
 
 # Tingkat kepercayaan interval konformal yang dihitung & disimpan per target.

@@ -286,7 +286,10 @@ def run(composition: dict[str, float], knobs: dict[str, float],
     prev_naoh_recycle = 0.0
     prev_caoh2_recycle = 0.0
     it = 0
-    for it in range(max_iter):
+    # noqa B007: `it` memang tak dipakai DI DALAM badan loop, tapi dipakai
+    # sesudahnya sebagai `iterations=it + 1` untuk melaporkan berapa iterasi
+    # yang dibutuhkan sampai referensi melingkar spent-liquor konvergen.
+    for it in range(max_iter):  # noqa: B007
         pd_E27 = prev_caoh2_recycle / MW_CAOH2 * 1000.0
         pd_E34 = pd_E9 + pd_E27
         pd_E36 = pd_E33 * CA_SI_TARGET - pd_E34
@@ -428,7 +431,7 @@ def run(composition: dict[str, float], knobs: dict[str, float],
 
         # ---------------- SPENT LIQUOR CONDITIONING ---------------------------
         sl_C5 = pr_C26
-        sl_C6 = pr_C27
+        sl_C6 = pr_C27  # noqa: F841 (port sel workbook, disimpan utuh)
         sl_C7 = pr_C28
         sl_C8 = pr_C31
         sl_C9 = pr_C33
@@ -466,7 +469,7 @@ def run(composition: dict[str, float], knobs: dict[str, float],
         sl_C52 = pd_C18 * naoh_conc_gl / 1000.0 - pd_C44
         sl_C53 = sl_C52 - sl_C50
 
-        sl_C56 = sl_C26 - sl_C26 * sl_C27  # identitas aljabar -> selalu F26
+        sl_C56 = sl_C26 - sl_C26 * sl_C27  # noqa: F841 (identitas aljabar -> selalu F26)
         sl_C57 = sl_C50 + sl_C53           # identitas aljabar -> selalu sl_C52
         sl_C60 = sl_C15 + sl_C5
         sl_C61 = (sl_E38 if sl_E36 == 0.0 else ((sl_E38 + sl_E39) - sl_E37)) * MW_CAOH2 / 1000.0

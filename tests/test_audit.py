@@ -94,15 +94,23 @@ def test_endpoint_menolak_judul_kosong(client):
     assert r.status_code == 400
 
 
-def test_endpoint_tulis_dilindungi_token(client, monkeypatch):
+def test_keputusan_tetap_bisa_dicatat_walau_token_tulis_aktif(client, monkeypatch):
+    """Tombol Terima/Tolak harus tetap jalan di konfigurasi produksi.
+
+    Endpoint ini sengaja TIDAK dijaga token: aplikasi belum punya login, jadi
+    token apa pun yang dikirim ke browser ikut terbaca semua orang — keamanan
+    pura-pura yang harganya adalah tombol advisory selalu 401 di deploy yang
+    kita sarankan sendiri (render.yaml membangkitkan token itu). Yang dijaga
+    token adalah knowledge/add, yang menulis BERKAS berisi teks bebas.
+    """
     monkeypatch.setenv("OPTIBAYER_WRITE_TOKEN", "rahasia")
     r = client.post("/v1/audit/decision",
                     json={"hour": 1, "title": "x", "decision": "terima"})
-    assert r.status_code == 401
-    r = client.post("/v1/audit/decision",
-                    json={"hour": 1, "title": "x", "decision": "terima"},
-                    headers={"X-Write-Token": "rahasia"})
     assert r.status_code == 200
+
+    # sementara endpoint yang menulis berkas tetap terkunci
+    r = client.post("/v1/knowledge/add", json={"name": "a", "body": "b"})
+    assert r.status_code == 401
 
 
 def test_kontrak_dan_rest_membaca_sumber_yang_sama(client):

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { catatKeputusan, getAudit, getHour, getReplay } from "./api";
 
 function mockFetch(body: unknown, ok = true, status = 200) {
@@ -36,6 +36,29 @@ describe("klien REST", () => {
   it("melempar kalau server menjawab error", async () => {
     mockFetch({}, false, 500);
     await expect(getReplay(0)).rejects.toThrow(/500/);
+  });
+});
+
+describe("alamat backend", () => {
+  afterEach(() => {
+    delete window.__OPTIBAYER_API__;
+    vi.resetModules();
+  });
+
+  it("memakai suntikan runtime kalau ada — kunci satu image untuk banyak env", async () => {
+    // Tanpa ini, URL backend terkunci saat build dan image produksi tidak bisa
+    // diarahkan ulang tanpa build ulang (masalah nyata saat deploy).
+    window.__OPTIBAYER_API__ = "https://api.contoh.id";
+    vi.resetModules();
+    const segar = await import("./api");
+    expect(segar.API).toBe("https://api.contoh.id");
+  });
+
+  it("jatuh ke default lokal kalau tidak ada suntikan", async () => {
+    delete window.__OPTIBAYER_API__;
+    vi.resetModules();
+    const segar = await import("./api");
+    expect(segar.API).toBe("http://localhost:8000");
   });
 });
 

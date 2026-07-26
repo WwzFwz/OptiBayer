@@ -17,7 +17,7 @@ def cheapest_for_recovery(composition: dict, target_recovery: float,
     bounds = [b[k] for k in schema.KNOBS]
 
     def objective(x: np.ndarray) -> float:
-        knobs = dict(zip(schema.KNOBS, x))
+        knobs = dict(zip(schema.KNOBS, x, strict=False))
         p = predict.predict_one(composition, knobs)
         penalty = max(target_recovery - p["recovery_pct"], 0.0) * 1e4
         return p["total_opex"] + penalty
@@ -25,7 +25,7 @@ def cheapest_for_recovery(composition: dict, target_recovery: float,
     res = differential_evolution(
         objective, bounds, seed=seed, maxiter=60, popsize=12, tol=1e-6, polish=True
     )
-    knobs = dict(zip(schema.KNOBS, [float(v) for v in res.x]))
+    knobs = dict(zip(schema.KNOBS, [float(v) for v in res.x], strict=False))
     pred = predict.predict_one(composition, knobs)
     if pred["recovery_pct"] < target_recovery - 0.25:  # toleransi kecil
         return None

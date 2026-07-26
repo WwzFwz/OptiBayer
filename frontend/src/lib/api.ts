@@ -1,7 +1,23 @@
 // Klien REST OptiBayer — satu-satunya pintu frontend ke inti Python.
-// Base URL dari env (NEXT_PUBLIC_API_URL); default localhost:8000.
-export const API =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+//
+// Urutan penentuan alamat backend, dari yang paling bisa diubah belakangan:
+//   1. window.__OPTIBAYER_API__ — disuntik server dari env OPTIBAYER_API_URL
+//      pada tiap permintaan (lihat app/layout.tsx). Ini yang membuat SATU image
+//      Docker bisa dipakai di lokal, staging, dan produksi tanpa build ulang.
+//   2. NEXT_PUBLIC_API_URL — ditanam saat build; tetap didukung utk dev lokal.
+//   3. localhost:8000 — default pengembangan.
+declare global {
+  interface Window { __OPTIBAYER_API__?: string }
+}
+
+function alamatApi(): string {
+  if (typeof window !== "undefined" && window.__OPTIBAYER_API__) {
+    return window.__OPTIBAYER_API__;
+  }
+  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+}
+
+export const API = alamatApi();
 
 export type Card = {
   severity: "critical" | "serious" | "warning" | "info";
