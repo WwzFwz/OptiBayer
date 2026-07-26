@@ -10,7 +10,6 @@ import re
 
 import streamlit as st
 
-from app import ui
 from src.advisory import knowledge
 
 

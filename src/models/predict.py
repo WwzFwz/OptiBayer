@@ -12,6 +12,8 @@ Fungsi inti:
 - `meta(target)`                            -> metadata model (fitur/bounds/metrik)
 - `anomaly(target, actual, predicted)`      -> deteksi anomali (>3x resid_std CV)
 - `within_bounds(composition, knobs)`       -> cek ekstrapolasi di luar data latih
+- `interval(target, value, level)`          -> interval konformal (doc 14 C1)
+- `predict_one_interval(comp, knobs)`       -> prediksi + interval sekaligus
 """
 
 from __future__ import annotations
@@ -131,6 +133,70 @@ def anomaly(target: str, actual: float, predicted: float, k: float = 3.0) -> boo
     return abs(actual - predicted) > k * resid_std
 
 
+DEFAULT_LEVEL = 0.90
+
+
+def halfwidth(target: str, level: float = DEFAULT_LEVEL) -> float | None:
+    """Setengah-lebar interval konformal target (None kalau model belum punya).
+
+    Model lama (dilatih sebelum fitur ini) tidak punya blok `conformal` di
+    metadata -> kembalikan None supaya pemanggil bisa diam-diam menyembunyikan
+    interval alih-alih menampilkan angka palsu.
+    """
+    try:
+        _, m = _get(target)
+    except FileNotFoundError:
+        return None
+    conf = m.get("metrics", {}).get("conformal")
+    if not conf:
+        return None
+    entry = conf.get(f"{level:.2f}")
+    if entry is None:  # level tak tersedia -> ambil level terdekat
+        try:
+            key = min(conf, key=lambda k: abs(float(k) - level))
+        except ValueError:
+            return None
+        entry = conf[key]
+    q = float(entry.get("q", 0.0))
+    return q if q > 0 else None
+
+
+def interval(target: str, value: float, level: float = DEFAULT_LEVEL) -> dict | None:
+    """Interval konformal di sekitar satu prediksi.
+
+    Returns {"lo","hi","half","level","coverage"} atau None bila model belum
+    punya kuantil konformal. `value` adalah prediksi titik dari model yang sama.
+    """
+    half = halfwidth(target, level)
+    if half is None:
+        return None
+    _, m = _get(target)
+    conf = m["metrics"]["conformal"]
+    key = f"{level:.2f}" if f"{level:.2f}" in conf else min(
+        conf, key=lambda k: abs(float(k) - level))
+    lo, hi = value - half, value + half
+    # jepit ke rentang fisik yang masuk akal (persentase tak bisa >100 / <0)
+    phys = schema.PHYSICAL_RANGES.get(target)
+    if phys:
+        lo, hi = max(lo, phys[0]), min(hi, phys[1])
+    return {
+        "lo": float(lo), "hi": float(hi), "half": float(half),
+        "level": float(key),
+        "coverage": float(conf[key].get("coverage_empiris", 0.0)),
+    }
+
+
+def predict_one_interval(composition: dict[str, float], knobs: dict[str, float],
+                         level: float = DEFAULT_LEVEL) -> dict[str, dict]:
+    """Prediksi satu titik operasi + interval konformal per target.
+
+    -> {target: {"value": float, "interval": {...} | None}}
+    """
+    point = predict_one(composition, knobs)
+    return {t: {"value": v, "interval": interval(t, v, level)}
+            for t, v in point.items()}
+
+
 def within_bounds(composition: dict[str, float], knobs: dict[str, float],
                    target: str = "recovery_pct") -> dict[str, bool]:
     """Cek tiap fitur (komposisi+knob) terhadap rentang data latih model.
@@ -149,3 +215,65 @@ def within_bounds(composition: dict[str, float], knobs: dict[str, float],
         lo, hi = bounds[feat]
         result[feat] = lo <= values[feat] <= hi
     return result
+
+
+# Jumlah oksida komposisi bauksit harus mendekati 100%. Terukur pada data
+# latih: 99.97–100.02%. Toleransi dilonggarkan ke ±0.5 pp supaya input manual
+# operator (pembulatan assay lab) tidak diprotes tanpa alasan.
+KOMPOSISI_TOTAL_TOL = 0.5
+
+
+def ood_report(composition: dict[str, float], knobs: dict[str, float],
+               target: str = "recovery_pct") -> dict:
+    """Ringkasan out-of-distribution: aman/tidak + fitur mana & seberapa jauh.
+
+    Dua lapis pemeriksaan, keduanya berdasar pengukuran (lihat
+    src/models/verify.py):
+
+    1. EKSTRAPOLASI kotak — fitur di luar rentang data latih. Terbukti
+       menaikkan galat surrogate vs fisika: NMAE recovery median 1.7% -> 3.4%,
+       p95 4.4% -> 23.8% saat kotak dilebarkan 25%.
+    2. PLAUSIBILITAS FISIK — jumlah oksida menyimpang dari 100%. Titik seperti
+       ini lolos pemeriksaan (1) per fitur tapi bisa membuat kalkulator neraca
+       massa sendiri mengeluarkan nilai mustahil (mis. OPEX negatif), jadi
+       prediksi di sana tidak berarti apa-apa.
+
+    Dipakai optimizer (jangan merekomendasikan setpoint di daerah yang tak
+    pernah dilihat model) dan kartu advisory, bukan hanya layar Lab.
+    """
+    bounds = meta(target).get("bounds", {})
+    values = {**composition, **knobs}
+    offenders = []
+    for feat in schema.FEATURES:
+        if feat not in bounds or feat not in values:
+            continue
+        lo, hi = bounds[feat]
+        v = float(values[feat])
+        if v < lo or v > hi:
+            span = max(hi - lo, 1e-9)
+            jarak = (lo - v if v < lo else v - hi) / span
+            offenders.append({
+                "feature": feat, "label": schema.label(feat), "value": v,
+                "lo": float(lo), "hi": float(hi),
+                "keluar_frac": round(float(jarak), 4),
+            })
+    offenders.sort(key=lambda o: o["keluar_frac"], reverse=True)
+
+    total_komposisi = sum(float(composition.get(c, 0.0)) for c in schema.INPUTS)
+    komposisi_wajar = abs(total_komposisi - 100.0) <= KOMPOSISI_TOTAL_TOL
+
+    return {
+        "ok": not offenders and komposisi_wajar,
+        "n_out": len(offenders),
+        "offenders": offenders,
+        "labels": [o["label"] for o in offenders],
+        "komposisi_total_pct": round(total_komposisi, 3),
+        "komposisi_wajar": komposisi_wajar,
+        "alasan": (
+            [] if not offenders else
+            [f"{len(offenders)} fitur di luar rentang data latih"]
+        ) + (
+            [] if komposisi_wajar else
+            [f"jumlah oksida {total_komposisi:.2f}% (seharusnya ~100%)"]
+        ),
+    }

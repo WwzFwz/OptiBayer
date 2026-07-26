@@ -2,32 +2,164 @@
   "data_hash": "2db89144bd14",
   "targets": {
     "recovery_pct": {
-      "cv_r2": 0.9870838141039521,
-      "cv_mae": 0.3248667869372753,
-      "cv_resid_std": 0.4450524470656295,
+      "cv_r2": 0.9985605004647906,
+      "cv_mae": 0.10601687640762003,
+      "cv_resid_std": 0.14863109645615755,
       "n_rows": 997,
-      "n_splits": 5
+      "n_splits": 5,
+      "conformal": {
+        "0.80": {
+          "q": 0.16694022981168644,
+          "coverage_empiris": 0.802407221664995
+        },
+        "0.90": {
+          "q": 0.21934920069729458,
+          "coverage_empiris": 0.9027081243731193
+        },
+        "0.95": {
+          "q": 0.2579947180143449,
+          "coverage_empiris": 0.9528585757271816
+        }
+      },
+      "family": "ridge_poly2",
+      "family_label": "Ridge + interaksi polinomial derajat 2",
+      "seleksi": {
+        "lightgbm": {
+          "cv_r2": 0.987084,
+          "cv_mae": 0.324867,
+          "us_per_prediksi": 595.538
+        },
+        "ridge_poly2": {
+          "cv_r2": 0.998561,
+          "cv_mae": 0.106017,
+          "us_per_prediksi": 49.507
+        },
+        "hist_gbdt": {
+          "cv_r2": 0.985958,
+          "cv_mae": 0.336355,
+          "us_per_prediksi": 2442.2975
+        }
+      }
     },
     "total_opex": {
       "cv_r2": 0.9454457453581508,
       "cv_mae": 517.9023772392136,
       "cv_resid_std": 1011.3768951124963,
       "n_rows": 997,
-      "n_splits": 5
+      "n_splits": 5,
+      "conformal": {
+        "0.80": {
+          "q": 643.6841762251352,
+          "coverage_empiris": 0.802407221664995
+        },
+        "0.90": {
+          "q": 1459.830432588844,
+          "coverage_empiris": 0.9027081243731193
+        },
+        "0.95": {
+          "q": 2418.743768958335,
+          "coverage_empiris": 0.9528585757271816
+        }
+      },
+      "family": "lightgbm",
+      "family_label": "LightGBM (gradient boosting, pohon dangkal)",
+      "seleksi": {
+        "lightgbm": {
+          "cv_r2": 0.945446,
+          "cv_mae": 517.902377,
+          "us_per_prediksi": 570.831
+        },
+        "ridge_poly2": {
+          "cv_r2": 0.88244,
+          "cv_mae": 1129.209078,
+          "us_per_prediksi": 47.038
+        },
+        "hist_gbdt": {
+          "cv_r2": 0.941551,
+          "cv_mae": 551.024312,
+          "us_per_prediksi": 2520.6495
+        }
+      }
     },
     "red_mud_t": {
-      "cv_r2": 0.9910340801786189,
-      "cv_mae": 5.980304468465676,
-      "cv_resid_std": 7.805672795056484,
+      "cv_r2": 0.9996860738270148,
+      "cv_mae": 1.130543805695044,
+      "cv_resid_std": 1.4620898103278166,
       "n_rows": 997,
-      "n_splits": 5
+      "n_splits": 5,
+      "conformal": {
+        "0.80": {
+          "q": 1.8147449494583725,
+          "coverage_empiris": 0.802407221664995
+        },
+        "0.90": {
+          "q": 2.3333836842977576,
+          "coverage_empiris": 0.9027081243731193
+        },
+        "0.95": {
+          "q": 2.7227913072023284,
+          "coverage_empiris": 0.9528585757271816
+        }
+      },
+      "family": "ridge_poly2",
+      "family_label": "Ridge + interaksi polinomial derajat 2",
+      "seleksi": {
+        "lightgbm": {
+          "cv_r2": 0.991034,
+          "cv_mae": 5.980304,
+          "us_per_prediksi": 646.809
+        },
+        "ridge_poly2": {
+          "cv_r2": 0.999686,
+          "cv_mae": 1.130544,
+          "us_per_prediksi": 51.56
+        },
+        "hist_gbdt": {
+          "cv_r2": 0.990755,
+          "cv_mae": 6.19518,
+          "us_per_prediksi": 2455.417
+        }
+      }
     },
     "precip_yield_pct": {
-      "cv_r2": 0.9995193844475323,
-      "cv_mae": 0.04574196164043013,
-      "cv_resid_std": 0.062275179900216214,
+      "cv_r2": 0.9998527112399405,
+      "cv_mae": 0.02064140977133136,
+      "cv_resid_std": 0.034480274332459274,
       "n_rows": 997,
-      "n_splits": 5
+      "n_splits": 5,
+      "conformal": {
+        "0.80": {
+          "q": 0.028056986700860875,
+          "coverage_empiris": 0.802407221664995
+        },
+        "0.90": {
+          "q": 0.04048710098727781,
+          "coverage_empiris": 0.9027081243731193
+        },
+        "0.95": {
+          "q": 0.0593324206486443,
+          "coverage_empiris": 0.9528585757271816
+        }
+      },
+      "family": "hist_gbdt",
+      "family_label": "HistGradientBoosting (scikit-learn)",
+      "seleksi": {
+        "lightgbm": {
+          "cv_r2": 0.999519,
+          "cv_mae": 0.045742,
+          "us_per_prediksi": 680.516
+        },
+        "ridge_poly2": {
+          "cv_r2": 0.99975,
+          "cv_mae": 0.037063,
+          "us_per_prediksi": 49.7035
+        },
+        "hist_gbdt": {
+          "cv_r2": 0.999853,
+          "cv_mae": 0.020641,
+          "us_per_prediksi": 2627.67
+        }
+      }
     }
   }
 }

@@ -1,0 +1,55 @@
+# Demo OptiBayer dengan SATU perintah:
+#
+#   docker compose up --build        -> API :8000 + React :3000
+#   docker compose --profile streamlit up --build   -> tambah Streamlit :8501
+#
+# Sebelum ini juri harus menyalakan dua proses manual (uvicorn + next dev) dan
+# memastikan Python 3.12 + Node 20 terpasang benar di mesinnya.
+
+services:
+  api:
+    build: .
+    image: optibayer-api
+    ports:
+      - "8000:8000"
+    environment:
+      # Asal frontend yang boleh memanggil API (lihat CORS di src/integration/api.py)
+      CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+      # Isi kalau instance ini dipublikasikan: endpoint tulis akan menuntut
+      # header X-Write-Token yang sama.
+      # OPTIBAYER_WRITE_TOKEN: "ganti-saya"
+      LLM_PROVIDER: "${LLM_PROVIDER:-template}"
+      GROQ_API_KEY: "${GROQ_API_KEY:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        # Dipakai browser pengguna, jadi harus alamat yang bisa dijangkau dari
+        # HOST — bukan nama service internal 'api'.
+        NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://localhost:8000}"
+    image: optibayer-web
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  streamlit:
+    build: .
+    image: optibayer-api
+    profiles: ["streamlit"]
+    command: >
+      python -m streamlit run app/main.py
+      --server.port 8501 --server.address 0.0.0.0 --server.headless true
+    ports:
+      - "8501:8501"
+    environment:
+      LLM_PROVIDER: "${LLM_PROVIDER:-template}"

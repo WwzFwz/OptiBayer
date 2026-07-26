@@ -18,6 +18,45 @@ def _fmt_knobs(knobs: dict) -> str:
     )
 
 
+def _fmt_interval(ctx: dict, target: str, desimal: int = 1) -> str:
+    """Teks interval konformal target, mis. '±0.7 (90%)'. Kosong kalau tak ada.
+
+    Model yang dilatih sebelum fitur konformal ada tidak punya kuantil ini —
+    dalam hal itu kita DIAM, bukan menampilkan angka yang tidak dihitung.
+    """
+    iv = (ctx.get("interval_now") or {}).get(target)
+    if not iv:
+        return ""
+    return f"±{iv['half']:.{desimal}f} (interval {iv['level']:.0%})"
+
+
+def _confidence(ctx: dict, target: str = "recovery_pct", desimal: int = 1) -> str:
+    """Label kepercayaan BERBASIS UKURAN: interval konformal + status guard.
+
+    Menggantikan label tangan ("tinggi"/"sedang") yang dulu dipakai di sini —
+    doc 14 C1. Urutan informasi: seberapa lebar ketidakpastiannya, lalu apakah
+    titik operasinya masih di dalam wilayah yang dikuasai model, lalu apakah
+    fisika setuju.
+    """
+    bagian = []
+    iv = _fmt_interval(ctx, target, desimal)
+    if iv:
+        bagian.append(f"recovery {iv}")
+
+    ood = ctx.get("ood") or {}
+    if ood.get("alasan"):
+        bagian.append("EKSTRAPOLASI: " + "; ".join(ood["alasan"]))
+    elif ood:
+        bagian.append("dalam rentang data latih")
+
+    pc = ctx.get("physics_check") or {}
+    if pc.get("rows"):
+        bagian.append("cocok dgn neraca massa" if pc.get("ok")
+                      else "BEDA dari neraca massa: " + ", ".join(pc["gagal_label"]))
+
+    return " · ".join(bagian) if bagian else "—"
+
+
 def cards(ctx: dict) -> list[dict]:
     """Susun kartu advisory dari konteks, urut severity lalu dampak."""
     out: list[dict] = []
@@ -43,13 +82,14 @@ def cards(ctx: dict) -> list[dict]:
                 "title": title,
                 "impact": (
                     f"Prediksi kondisi ini: recovery "
-                    f"{ctx['predicted_now']['recovery_pct']:.1f}%, OPEX "
+                    f"{ctx['predicted_now']['recovery_pct']:.1f}% "
+                    f"{_fmt_interval(ctx, 'recovery_pct')}, OPEX "
                     f"{ctx['predicted_now']['total_opex']:,.0f}/jam"
                 ),
                 "action": "Tekan ⏸ Pause — rekomendasi setpoint penuh "
                           "(optimizer) dihitung saat berhenti",
                 "why": "Mode Play memakai jalur ringan agar replay mulus",
-                "confidence": "—",
+                "confidence": _confidence(ctx),
             })
         else:
             why = "; ".join(
@@ -61,12 +101,71 @@ def cards(ctx: dict) -> list[dict]:
                 "title": title,
                 "impact": (
                     f"Jika rekomendasi diikuti: recovery {d['recovery_pct']:+.1f}%, "
-                    f"OPEX {d['total_opex']:+.0f}/jam, red mud {d['red_mud_t']:+.1f} t"
+                    f"OPEX {d['total_opex']:+.0f}/jam, red mud {d['red_mud_t']:+.1f} t "
+                    f"({ctx.get('delta_basis', 'model')})"
                 ),
                 "action": f"Sesuaikan setpoint → {_fmt_knobs(ctx['recommended_knobs'])}",
                 "why": why,
-                "confidence": "tinggi" if abs(d["recovery_pct"]) > 0.3 else "sedang",
+                "confidence": _confidence(ctx),
             })
+
+    # 1b) Peringatan kalau perbaikan yang dijanjikan lebih kecil dari
+    #     ketidakpastian model sendiri — operator berhak tahu bahwa "naik 0.2%"
+    #     pada model dengan interval ±0.7% belum tentu naik sungguhan.
+    iv_rec = (ctx.get("interval_now") or {}).get("recovery_pct")
+    drec = abs(d.get("recovery_pct", 0.0))
+    if iv_rec and 0 < drec < iv_rec["half"]:
+        out.append({
+            "severity": "info",
+            "title": "Keunggulan setpoint ini tipis dibanding ketidakpastian model",
+            "impact": (
+                f"Perbaikan recovery {drec:.2f} pp ({ctx.get('delta_basis', 'model')}) "
+                f"lebih kecil dari interval surrogate ±{iv_rec['half']:.2f} pp "
+                f"({iv_rec['level']:.0%})"
+            ),
+            "action": "Perlakukan sebagai penyetelan halus — setpoint lain yang "
+                      "hampir sama baiknya bisa saja sebenarnya lebih unggul",
+            "why": "Optimizer memilih pakai surrogate; kalau selisih antar-kandidat "
+                   "lebih kecil dari galat surrogate, urutan juaranya belum pasti",
+            "confidence": _confidence(ctx),
+        })
+
+    # 1c) Guard out-of-distribution (doc 14 C3) — terukur: galat surrogate vs
+    #     fisika naik 2-3x saat titik operasi keluar rentang latih.
+    ood = ctx.get("ood") or {}
+    if ood.get("alasan"):
+        out.append({
+            "severity": "serious",
+            "title": "Rekomendasi berada di luar wilayah data latih",
+            "impact": "; ".join(ood["alasan"]),
+            "action": "Jangan terapkan langsung — verifikasi dengan kalkulator "
+                      "neraca massa & pengalaman shift sebelum menyetel",
+            "why": (
+                "Uji fidelitas (src/models/verify.py): di luar rentang latih, "
+                "galat surrogate terhadap fisika naik dari ~1.7% ke ~3.4% "
+                "(p95 4.4% → 23.8%)"
+            ),
+            "confidence": _confidence(ctx),
+        })
+
+    # 1d) Wasit fisika tidak setuju dengan ML pada titik rekomendasi.
+    pc = ctx.get("physics_check") or {}
+    if pc.get("rows") and not pc.get("ok"):
+        detail = "; ".join(
+            f"{r['label']}: ML {r['ml']:,.1f} vs fisika {r['fisika']:,.1f}"
+            for r in pc["rows"] if not r["ok"]
+        )
+        out.append({
+            "severity": "warning",
+            "title": "Surrogate menyimpang jauh dari neraca massa di setpoint ini",
+            "impact": detail,
+            "action": "Angka yang ditampilkan sudah memakai neraca massa, jadi "
+                      "aman dibaca; laporkan ke tim data agar surrogate dilatih ulang "
+                      "di daerah operasi ini",
+            "why": "Selisih melampaui 2x interval konformal model — ambang "
+                   "dikalibrasi dari sebaran selisih di setpoint rekomendasi",
+            "confidence": _confidence(ctx),
+        })
 
     # 2) Dosis CaO (kaustisasi soda mati — klaim #2 Ainin, fallback stoikiometri)
     ca = ctx["cao_advisory"]
@@ -104,7 +203,7 @@ def cards(ctx: dict) -> list[dict]:
             "impact": f"Aktual {act:.1f}% vs prediksi {prd:.1f}%",
             "action": "Verifikasi assay bauksit & kalibrasi instrumen; cek hasil lab terakhir",
             "why": "Selisih melebihi 3× simpangan residual validasi silang model",
-            "confidence": "tinggi",
+            "confidence": _confidence(ctx),
         })
 
     # 4) Nilai karbonasi (info ESG)

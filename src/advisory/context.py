@@ -9,7 +9,7 @@ from __future__ import annotations
 import pandas as pd
 
 from src import schema
-from src.models import explain, predict, registry
+from src.models import explain, predict, registry, verify
 from src.optimize import pareto
 from src.physics import carbonation, na_balance
 
@@ -45,17 +45,65 @@ def build(row: pd.Series, history: pd.DataFrame | None = None,
             "surrogate_recovery_pct", model, predict.frame(comp, knobs)
         )
 
+    # Interval konformal (doc 14 C1): setiap angka prediksi dibawa bersama
+    # lebar ketidakpastiannya, bukan label "tinggi/sedang" tulisan tangan.
+    interval_now = {t: predict.interval(t, v) for t, v in pred_now.items()}
+
+    # Guard OOD (doc 14 C3) — dievaluasi pada SETPOINT REKOMENDASI, bukan cuma
+    # di layar Lab, karena optimizer surrogate memang cenderung memanjat ke
+    # tepi ruang yang jarang datanya.
+    ood = predict.ood_report(comp, reco_knobs)
+
+    # Wasit fisika: rekomendasi ML dicek ulang oleh neraca massa deterministik
+    # sebelum sampai ke operator. Murah (~0.1 ms) sehingga aman dijalankan
+    # tiap tick, termasuk mode Play.
+    try:
+        physics_check = verify.verify(comp, reco_knobs)
+    except Exception:   # kalkulator gagal (input ekstrem) -> jangan matikan advisory
+        physics_check = {"ok": True, "n_gagal": 0, "rows": [], "gagal_label": [],
+                         "error": "kalkulator neraca massa tidak dapat dijalankan"}
+
+    # SKOR ULANG DENGAN FISIKA (obat winner's curse).
+    #
+    # Optimizer surrogate memilih titik di mana MODELNYA paling optimistis, jadi
+    # selisih ML-vs-fisika di titik pemenang secara sistematis lebih besar
+    # daripada di titik acak (terukur: melampaui 1x interval konformal pada
+    # 6-25% rekomendasi). Pencarian tetap memakai surrogate karena butuh 2400
+    # evaluasi; tetapi ANGKA YANG DILIHAT OPERATOR dihitung ulang dengan neraca
+    # massa eksak — biayanya hanya ~0.1 ms untuk dua titik. Dengan begitu
+    # "kalau rekomendasi diikuti, recovery +0.8%" adalah janji yang berasal dari
+    # kalkulator, bukan dari selisih dua tebakan model.
+    try:
+        fisika_now = verify.physics_targets(comp, knobs)
+        fisika_reco = verify.physics_targets(comp, reco_knobs)
+        delta_fisika = {t: float(fisika_reco[t] - fisika_now[t])
+                        for t in fisika_reco if t in fisika_now}
+    except Exception:
+        fisika_now, fisika_reco, delta_fisika = {}, {}, {}
+
     return {
         "fast": fast,
         "composition": comp,
         "knobs_now": knobs,
         "actual": {t: float(row[t]) for t in predict.TARGETS if t in row},
         "predicted_now": pred_now,
+        "interval_now": interval_now,
+        "ood": ood,
+        "physics_check": physics_check,
         "recommended_knobs": reco_knobs,
         "predicted_if_followed": {t: float(v) for t, v in reco.items()},
-        "delta_if_followed": {
+        # delta versi ML (dipertahankan utk transparansi & pembanding)
+        "delta_if_followed_ml": {
             t: float(v) - pred_now[t] for t, v in reco.items()
         },
+        # delta yang DIPAKAI UI: hasil neraca massa eksak bila tersedia,
+        # jatuh ke versi ML hanya kalau kalkulator gagal dijalankan
+        "delta_if_followed": delta_fisika or {
+            t: float(v) - pred_now[t] for t, v in reco.items()
+        },
+        "delta_basis": "neraca massa eksak" if delta_fisika else "selisih prediksi ML",
+        "fisika_now": fisika_now,
+        "fisika_if_followed": fisika_reco,
         "shap_factors": factors,
         "na_balance": na_balance.breakdown(row),
         "cao_advisory": na_balance.cao_advisory(row),

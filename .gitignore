@@ -40,9 +40,11 @@ Thumbs.db
 # Streamlit
 .streamlit/secrets.toml
 
-README.md
 # Frontend Next.js
 frontend/node_modules/
 frontend/.next/
 frontend/out/
 frontend/.env.local
+
+# Docker
+.dockerignore.local

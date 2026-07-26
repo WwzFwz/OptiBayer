@@ -46,14 +46,39 @@ npm run dev                              # buka http://localhost:3000
 Frontend memanggil API di `http://localhost:8000` (indikator "API tersambung"
 di kanan atas). Kalau backend belum jalan, muncul instruksi menyalakannya.
 
-### Uji tanpa dashboard (semua engine jalan dari CLI)
+### C. Docker — satu perintah (paling ringkas untuk juri)
 
 ```bash
-python tests/test_data.py       # M0 fondasi data
-python tests/test_engine.py     # M2 fisika + optimizer + regret
-python tests/test_advisory.py   # M3 replay + advisory
-python tests/test_app.py        # dashboard Streamlit end-to-end (AppTest)
+docker compose up --build                       # API :8000 + React :3000
+docker compose --profile streamlit up --build   # + Streamlit :8501
 ```
+
+Model dilatih saat build image, jadi permintaan pertama tidak menunggu.
+
+### Uji
+
+```bash
+python -m pytest                 # semua (termasuk Streamlit end-to-end)
+python -m pytest -m "not slow"   # cepat saja (~45 dtk) — dipakai saat ngoding
+python -m pytest tests/test_model_trust.py   # interval, guard OOD, wasit fisika
+```
+
+Kalau ingin membuktikan mutu model sendiri:
+
+```bash
+python -m src.models.benchmark   # adu keluarga model per target
+python -m src.models.verify      # fidelitas surrogate vs fisika + kecepatan
+```
+
+### Agen AI (MCP) — digital twin sebagai alat
+
+```bash
+python -m src.integration.mcp_server
+```
+
+Tool-nya dibangkitkan dari kontrak yang sama dengan REST API
+(`src/integration/contract.py`), jadi tidak ada definisi ganda. Contoh
+pendaftaran di Claude Desktop/Code ada di docstring modulnya. Semua read-only.
 
 ### Advisory LLM (opsional, gratis)
 
@@ -81,12 +106,26 @@ Tanpa LLM, semua fitur AI tetap jalan dengan ringkasan template.
 
 ---
 
+## Kepercayaan angka (yang membedakan dari dashboard biasa)
+
+Setiap angka yang dilihat operator membawa tiga pemeriksaan — semuanya terukur,
+bukan label yang ditulis tangan. Bukti & metodologi: **[docs/21](docs/21-benchmark-model.md)**.
+
+| Lapisan | Apa yang dijawab | Wujudnya di layar |
+|---|---|---|
+| **Interval konformal** | Selebar apa ketidakpastian model? | "recovery 91.7% ±0.22 (interval 90%)" — cakupan diuji di data held-out: 88.8–96.4% |
+| **Guard OOD** | Apakah kondisi ini masih dikuasai model? | Strip peringatan bila keluar rentang latih atau komposisi tak menjumlah ~100% |
+| **Wasit fisika** | Apakah neraca massa setuju? | Delta rekomendasi dihitung ULANG dengan kalkulator eksak; kartu menandai "neraca massa eksak" |
+
+Model dipilih **per target** lewat adu validasi silang, bukan preferensi:
+recovery & red mud → ridge-polinomial, OPEX → LightGBM, yield → HistGB.
+
 ## Arsitektur (headless, 3 klien di atas 1 inti)
 
 ```
                     ┌─ Streamlit CRO Console (app/)
 Inti Python ────────┤─ Next.js + React (frontend/)   ── REST API (src/integration/api.py)
-(predict/optimize/  └─ MCP server (roadmap)
+(predict/optimize/  └─ MCP server (src/integration/mcp_server.py)
  mass_balance/       ↑
  advisory/knowledge) data historian / OPC UA (produksi)
 ```
@@ -102,17 +141,20 @@ antam-hackathon/
 ├── src/
 │   ├── schema.py · capability.py
 │   ├── data/       adapters · validate · replay · rebuild_targets
-│   ├── models/     train · registry · predict · explain (SHAP)
+│   ├── models/     train (pilih keluarga + konformal) · registry · predict
+│   │               explain (SHAP agnostik) · verify (wasit fisika) · benchmark
 │   ├── physics/    mass_balance · carbonation · precipitation · na_balance
 │   ├── optimize/   pareto (NSGA-II carbon-aware) · goal_seek · regret
 │   ├── advisory/   context · template · providers (LLM) · knowledge
-│   └── integration/ contract · api (FastAPI REST)
+│   └── integration/ contract · api (FastAPI REST) · mcp_server
 ├── models/                    ← artefak + metrics.json
 ├── app/                       ← Streamlit (main.py + ui.py + views/)
 ├── frontend/                  ← Next.js + React (src/components + lib)
 └── tests/                     ← uji per milestone
 ```
 
+> 🔬 Bukti mutu model (benchmark, interval, fidelitas): **[docs/21-benchmark-model.md](docs/21-benchmark-model.md)**
+> · Batasan yang diakui terbuka: **[docs/14-batasan.md](docs/14-batasan.md)**
 > 📖 Setup 5 menit + tur fitur + troubleshooting: **[docs/13-panduan-setup.md](docs/13-panduan-setup.md)**
 > · Deploy (juri dapat link): **[docs/16-tutorial-deploy.md](docs/16-tutorial-deploy.md)**
 > · Laporan teknis (metode + diagram): **[docs/17-laporan-teknis.md](docs/17-laporan-teknis.md)**

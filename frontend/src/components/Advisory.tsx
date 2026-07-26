@@ -168,14 +168,14 @@ function AdvisoryCard({ card, decisionKey, setPage }: {
         <div className="grid grid-cols-3 gap-2">
           <Btn bg={C.status.good} label={`Terima: ${card.title}`}
                onClick={() => {
-                 s.decide(decisionKey, "terima");
+                 s.decide(decisionKey, "terima", card.title);
                  toast("success", `Advisory diterima — ${card.title}`);
                }}>
             <Check size={13} /> Terima
           </Btn>
           <Btn outline={C.status.critical} label={`Tolak: ${card.title}`}
                onClick={() => {
-                 s.decide(decisionKey, "tolak");
+                 s.decide(decisionKey, "tolak", card.title);
                  toast("info", `Advisory ditolak — tercatat di audit`);
                }}>
             <X size={13} /> Tolak

@@ -6,7 +6,10 @@ import {
   Network, Share2, PanelLeft, Flame,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { PageId } from "@/lib/pages";
 import { C } from "@/lib/theme";
+
+export type { PageId };
 
 export const PAGES = [
   { id: "overview", label: "Overview", Icon: Activity },
@@ -19,8 +22,6 @@ export const PAGES = [
   { id: "knowledge", label: "Knowledge", Icon: BookOpen },
   { id: "integrasi", label: "Integrasi", Icon: Network },
 ] as const;
-
-export type PageId = (typeof PAGES)[number]["id"];
 
 export default function Rail({
   page, setPage,

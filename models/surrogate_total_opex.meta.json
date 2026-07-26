@@ -84,7 +84,41 @@
     "cv_mae": 517.9023772392136,
     "cv_resid_std": 1011.3768951124963,
     "n_rows": 997,
-    "n_splits": 5
+    "n_splits": 5,
+    "conformal": {
+      "0.80": {
+        "q": 643.6841762251352,
+        "coverage_empiris": 0.802407221664995
+      },
+      "0.90": {
+        "q": 1459.830432588844,
+        "coverage_empiris": 0.9027081243731193
+      },
+      "0.95": {
+        "q": 2418.743768958335,
+        "coverage_empiris": 0.9528585757271816
+      }
+    },
+    "family": "lightgbm",
+    "family_label": "LightGBM (gradient boosting, pohon dangkal)",
+    "seleksi": {
+      "lightgbm": {
+        "cv_r2": 0.945446,
+        "cv_mae": 517.902377,
+        "us_per_prediksi": 570.831
+      },
+      "ridge_poly2": {
+        "cv_r2": 0.88244,
+        "cv_mae": 1129.209078,
+        "us_per_prediksi": 47.038
+      },
+      "hist_gbdt": {
+        "cv_r2": 0.941551,
+        "cv_mae": 551.024312,
+        "us_per_prediksi": 2520.6495
+      }
+    }
   },
-  "data_hash": "2db89144bd14"
+  "data_hash": "2db89144bd14",
+  "family": "lightgbm"
 }

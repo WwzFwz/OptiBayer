@@ -80,11 +80,45 @@
     ]
   },
   "metrics": {
-    "cv_r2": 0.9995193844475323,
-    "cv_mae": 0.04574196164043013,
-    "cv_resid_std": 0.062275179900216214,
+    "cv_r2": 0.9998527112399405,
+    "cv_mae": 0.02064140977133136,
+    "cv_resid_std": 0.034480274332459274,
     "n_rows": 997,
-    "n_splits": 5
+    "n_splits": 5,
+    "conformal": {
+      "0.80": {
+        "q": 0.028056986700860875,
+        "coverage_empiris": 0.802407221664995
+      },
+      "0.90": {
+        "q": 0.04048710098727781,
+        "coverage_empiris": 0.9027081243731193
+      },
+      "0.95": {
+        "q": 0.0593324206486443,
+        "coverage_empiris": 0.9528585757271816
+      }
+    },
+    "family": "hist_gbdt",
+    "family_label": "HistGradientBoosting (scikit-learn)",
+    "seleksi": {
+      "lightgbm": {
+        "cv_r2": 0.999519,
+        "cv_mae": 0.045742,
+        "us_per_prediksi": 680.516
+      },
+      "ridge_poly2": {
+        "cv_r2": 0.99975,
+        "cv_mae": 0.037063,
+        "us_per_prediksi": 49.7035
+      },
+      "hist_gbdt": {
+        "cv_r2": 0.999853,
+        "cv_mae": 0.020641,
+        "us_per_prediksi": 2627.67
+      }
+    }
   },
-  "data_hash": "2db89144bd14"
+  "data_hash": "2db89144bd14",
+  "family": "hist_gbdt"
 }

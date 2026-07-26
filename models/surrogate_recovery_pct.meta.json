@@ -80,11 +80,45 @@
     ]
   },
   "metrics": {
-    "cv_r2": 0.9870838141039521,
-    "cv_mae": 0.3248667869372753,
-    "cv_resid_std": 0.4450524470656295,
+    "cv_r2": 0.9985605004647906,
+    "cv_mae": 0.10601687640762003,
+    "cv_resid_std": 0.14863109645615755,
     "n_rows": 997,
-    "n_splits": 5
+    "n_splits": 5,
+    "conformal": {
+      "0.80": {
+        "q": 0.16694022981168644,
+        "coverage_empiris": 0.802407221664995
+      },
+      "0.90": {
+        "q": 0.21934920069729458,
+        "coverage_empiris": 0.9027081243731193
+      },
+      "0.95": {
+        "q": 0.2579947180143449,
+        "coverage_empiris": 0.9528585757271816
+      }
+    },
+    "family": "ridge_poly2",
+    "family_label": "Ridge + interaksi polinomial derajat 2",
+    "seleksi": {
+      "lightgbm": {
+        "cv_r2": 0.987084,
+        "cv_mae": 0.324867,
+        "us_per_prediksi": 595.538
+      },
+      "ridge_poly2": {
+        "cv_r2": 0.998561,
+        "cv_mae": 0.106017,
+        "us_per_prediksi": 49.507
+      },
+      "hist_gbdt": {
+        "cv_r2": 0.985958,
+        "cv_mae": 0.336355,
+        "us_per_prediksi": 2442.2975
+      }
+    }
   },
-  "data_hash": "2db89144bd14"
+  "data_hash": "2db89144bd14",
+  "family": "ridge_poly2"
 }

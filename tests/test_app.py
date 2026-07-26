@@ -1,32 +1,49 @@
-"""Uji dashboard end-to-end via streamlit AppTest: skrip harus jalan tanpa exception."""
+"""Uji dashboard Streamlit end-to-end via AppTest: skrip harus jalan tanpa exception.
 
-import sys
-from pathlib import Path
+Ditandai `slow` karena satu AppTest menjalankan seluruh aplikasi (termasuk
+optimizer). Jalankan hanya yang cepat dengan:  pytest -m "not slow"
+"""
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
+import pytest
 from streamlit.testing.v1 import AppTest
 
+from tests.conftest import ROOT
 
-def main():
-    at = AppTest.from_file(str(ROOT / "app" / "main.py"), default_timeout=180)
+pytestmark = pytest.mark.slow
+
+
+@pytest.fixture(scope="module")
+def app(models_siap):
+    at = AppTest.from_file(str(ROOT / "app" / "main.py"), default_timeout=300)
     at.run()
-    assert not at.exception, at.exception
-    # KPI + advisory + sidebar hadir
-    assert len(at.metric) >= 6, f"metric={len(at.metric)}"
-    assert at.sidebar.selectbox[0].value in ("Operasi Normal", "Gangguan: Silika Spike")
-    print(f"run-1 OK: {len(at.metric)} metric, exception=None")
+    return at
 
-    # skenario silika spike + maju ke jam 30 -> harus tetap tanpa exception
-    at.sidebar.selectbox[0].set_value("Gangguan: Silika Spike").run()
-    assert not at.exception, at.exception
+
+def test_boot_tanpa_exception(app):
+    assert not app.exception, app.exception
+    assert len(app.metric) >= 6, f"metric={len(app.metric)}"
+
+
+def test_pemilih_skenario_hadir(app):
+    assert app.sidebar.selectbox[0].value in (
+        "Operasi Normal", "Gangguan: Silika Spike")
+
+
+def test_skenario_spike_dan_lompat_jam(app):
+    app.sidebar.selectbox[0].set_value("Gangguan: Silika Spike").run()
+    assert not app.exception, app.exception
     # slider 'Jam simulasi' = slider ke-2 di sidebar (setelah 'Detik per jam')
-    at.sidebar.slider[1].set_value(30).run()
-    assert not at.exception, at.exception
-    print("run-2 OK: skenario spike jam-30 tanpa exception")
-    print("APP OK")
+    app.sidebar.slider[1].set_value(30).run()
+    assert not app.exception, app.exception
 
 
-if __name__ == "__main__":
-    main()
+def test_toggle_tema_terang_dan_gelap(app):
+    from app import ui
+
+    app.sidebar.toggle[0].set_value(True).run()
+    assert not app.exception, app.exception
+    assert ui.MODE == "light" and ui.SURFACE == "#fcfcfb", (ui.MODE, ui.SURFACE)
+
+    app.sidebar.toggle[0].set_value(False).run()
+    assert not app.exception, app.exception
+    assert ui.MODE == "dark" and ui.SURFACE == "#1a1a19"

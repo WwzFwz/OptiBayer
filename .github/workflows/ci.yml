@@ -1,0 +1,80 @@
+name: CI
+
+# Sebelum ini tidak ada CI sama sekali: regresi backend hanya ketahuan kalau
+# ada yang ingat menjalankan tes, dan regresi frontend hanya ketahuan di layar.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Python — pytest + ruff
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Pasang dependensi
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Latih model surrogate
+        # Artefak .joblib sengaja tidak di-commit (lihat .gitignore), jadi CI
+        # melatihnya dari data mentah — sekaligus membuktikan pipeline latih
+        # masih jalan dari nol.
+        run: python -m src.models.train
+
+      - name: Pytest (cepat)
+        run: python -m pytest -m "not slow"
+
+      - name: Pytest (lambat — Streamlit end-to-end)
+        run: python -m pytest -m slow
+
+      - name: Uji fidelitas surrogate vs fisika
+        run: python -m src.models.verify -n 80
+
+  frontend:
+    name: Next.js — typecheck + lint + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Pasang dependensi
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

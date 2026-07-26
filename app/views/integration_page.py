@@ -12,7 +12,6 @@ import json
 import pandas as pd
 import streamlit as st
 
-from app import ui
 from src.integration import contract
 
 

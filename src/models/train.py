@@ -7,8 +7,10 @@ precip_yield_pct):
    TANPA kolom intermediate — anti data-leakage, lihat schema.py) dan y = target.
 2. 5-fold cross-validation (out-of-fold prediction) dengan LightGBM Regressor
    -> cv_r2, cv_mae, cv_resid_std (dipakai src.models.predict.anomaly()).
-3. Latih model final di seluruh data, simpan lewat src.models.registry.save().
-4. Tulis models/metrics.json gabungan (dibaca README/dashboard).
+3. Kuantil KONFORMAL dari residual out-of-fold -> interval prediksi bergaransi
+   cakupan (doc 14 C1), dipakai src.models.predict.interval().
+4. Latih model final di seluruh data, simpan lewat src.models.registry.save().
+5. Tulis models/metrics.json gabungan (dibaca README/dashboard).
 
 CLI:
     python -m src.models.train --data data/raw/data.csv --splits 5
@@ -57,20 +59,120 @@ LGBM_PARAMS: dict = dict(
 )
 
 
-def _make_model() -> LGBMRegressor:
-    return LGBMRegressor(**LGBM_PARAMS)
+# Tingkat kepercayaan interval konformal yang dihitung & disimpan per target.
+CONFORMAL_LEVELS: tuple[float, ...] = (0.80, 0.90, 0.95)
+
+# Anggaran waktu prediksi: optimizer NSGA-II memanggil surrogate 2400x per
+# jalan, jadi model yang lambat (mis. RandomForest ~30 us/baris) ditolak
+# meskipun skornya bagus.
+MAX_US_PER_PREDIKSI = 15.0
+
+# Keluarga model yang diadu per target. Dulu LightGBM dipilih karena argumen;
+# sekarang dipilih karena BUKTI validasi silang (doc 14 C2). Ternyata tidak ada
+# satu pemenang tunggal: target yang berasal dari formula fisika yang mulus
+# (recovery, red mud, yield) lebih cocok ke ridge-polinomial, sedangkan OPEX
+# yang bertingkat lebih cocok ke gradient boosting. Lihat docs/21.
+FAMILIES: dict[str, str] = {
+    "lightgbm": "LightGBM (gradient boosting, pohon dangkal)",
+    "ridge_poly2": "Ridge + interaksi polinomial derajat 2",
+    "hist_gbdt": "HistGradientBoosting (scikit-learn)",
+}
+
+
+def _build(family: str):
+    if family == "lightgbm":
+        return LGBMRegressor(**LGBM_PARAMS)
+    if family == "ridge_poly2":
+        from sklearn.linear_model import Ridge
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+
+        return make_pipeline(
+            StandardScaler(),
+            PolynomialFeatures(degree=2, include_bias=False),
+            Ridge(alpha=10.0),
+        )
+    if family == "hist_gbdt":
+        from sklearn.ensemble import HistGradientBoostingRegressor
+
+        return HistGradientBoostingRegressor(
+            max_depth=5, learning_rate=0.045, max_iter=400, random_state=42)
+    raise ValueError(f"keluarga model tak dikenal: {family}")
+
+
+def _make_model(family: str = "lightgbm"):
+    return _build(family)
+
+
+def conformal_quantiles(residuals: np.ndarray,
+                        levels: tuple[float, ...] = CONFORMAL_LEVELS) -> dict:
+    """Kuantil konformal |residual| out-of-fold + cakupan empirisnya.
+
+    Ini *cross-conformal* (skor nonkonformitas = |y - ŷ_out-of-fold|): interval
+    ±q(level) menjaga cakupan mendekati `level` tanpa mengasumsikan bentuk
+    distribusi galat. Koreksi sampel-hingga ceil((n+1)·level)/n dipakai supaya
+    tidak optimistis di n kecil (Vovk et al.; MAPIE memakai skor yang sama).
+
+    CATATAN KEJUJURAN: data latih saat ini adalah keluaran kalkulator neraca
+    massa deterministik (lihat src/data/rebuild_targets.py), jadi residual di
+    sini murni GALAT SURROGATE terhadap kalkulator — bukan ketidakpastian
+    pabrik nyata. Begitu data historian masuk, fungsi ini tidak berubah tapi
+    artinya naik kelas jadi ketidakpastian sesungguhnya.
+    """
+    absr = np.abs(np.asarray(residuals, dtype=float))
+    n = len(absr)
+    out: dict[str, dict] = {}
+    for level in levels:
+        if n < 2:
+            q = float(absr.max()) if n else 0.0
+        else:
+            rank = min(1.0, np.ceil((n + 1) * level) / n)
+            q = float(np.quantile(absr, rank, method="higher"))
+        out[f"{level:.2f}"] = {
+            "q": q,
+            "coverage_empiris": float(np.mean(absr <= q)) if n else 0.0,
+        }
+    return out
 
 
 def train_one(df: pd.DataFrame, target: str, n_splits: int = 5,
-              random_state: int = 42) -> dict:
-    """Latih satu target: CV out-of-fold utk metrik + fit final di semua data."""
+              random_state: int = 42, family: str | None = None) -> dict:
+    """Latih satu target: pilih keluarga model, CV out-of-fold, fit final.
+
+    `family=None` (default) berarti PILIH OTOMATIS: semua keluarga di FAMILIES
+    diadu dengan fold yang sama, pemenangnya adalah MAE cross-validation
+    terkecil di antara yang lolos anggaran kecepatan prediksi. Semua skor
+    pesaing ikut disimpan di metadata supaya keputusannya bisa diaudit.
+    """
     X = df[schema.FEATURES]
     y = df[target].to_numpy(dtype=float)
     n = len(y)
 
     n_splits_eff = max(2, min(n_splits, n))
     kf = KFold(n_splits=n_splits_eff, shuffle=True, random_state=random_state)
-    oof = cross_val_predict(_make_model(), X, y, cv=kf, n_jobs=1)
+
+    kandidat = [family] if family else list(FAMILIES)
+    seleksi: dict[str, dict] = {}
+    for f in kandidat:
+        model_f = _make_model(f)
+        oof_f = cross_val_predict(model_f, X, y, cv=kf, n_jobs=1)
+        t0 = time.perf_counter()
+        model_f.fit(X, y)
+        model_f.predict(X.head(min(200, len(X))))
+        us = (time.perf_counter() - t0) / min(200, len(X)) * 1e6
+        seleksi[f] = {
+            "cv_r2": float(r2_score(y, oof_f)),
+            "cv_mae": float(mean_absolute_error(y, oof_f)),
+            "us_per_prediksi": float(us),
+            "_oof": oof_f,
+        }
+
+    layak = {f: s for f, s in seleksi.items()
+             if s["us_per_prediksi"] <= MAX_US_PER_PREDIKSI} or seleksi
+    terpilih = min(layak, key=lambda f: layak[f]["cv_mae"])
+    oof = seleksi[terpilih].pop("_oof")
+    for s in seleksi.values():
+        s.pop("_oof", None)
 
     resid = y - oof
     metrics = {
@@ -79,13 +181,19 @@ def train_one(df: pd.DataFrame, target: str, n_splits: int = 5,
         "cv_resid_std": float(np.std(resid, ddof=1)) if n > 1 else 0.0,
         "n_rows": int(n),
         "n_splits": int(n_splits_eff),
+        "conformal": conformal_quantiles(resid),
+        "family": terpilih,
+        "family_label": FAMILIES.get(terpilih, terpilih),
+        "seleksi": {f: {k: round(v, 6) for k, v in s.items()}
+                    for f, s in seleksi.items()},
     }
 
-    final_model = _make_model()
+    final_model = _make_model(terpilih)
     final_model.fit(X, y)
 
     bounds = {c: (float(df[c].min()), float(df[c].max())) for c in schema.FEATURES}
-    return {"model": final_model, "metrics": metrics, "bounds": bounds}
+    return {"model": final_model, "metrics": metrics, "bounds": bounds,
+            "family": terpilih}
 
 
 def train_all(data_path: str | Path = DEFAULT_DATA, n_splits: int = 5,
@@ -130,16 +238,25 @@ def train_all(data_path: str | Path = DEFAULT_DATA, n_splits: int = 5,
             bounds=result["bounds"],
             metrics=result["metrics"],
             dhash=dhash,
+            extra={"family": result["family"]},
         )
         all_metrics[target] = result["metrics"]
         trained.append(target)
         if verbose:
             m = result["metrics"]
-            print(
-                f"[selesai] surrogate_{target}: "
-                f"R²={m['cv_r2']:.4f}  MAE={m['cv_mae']:.4f}  "
-                f"resid_std={m['cv_resid_std']:.4f}  n={m['n_rows']}"
+            c90 = m["conformal"]["0.90"]
+            kalah = ", ".join(
+                f"{f} MAE={s['cv_mae']:.4f}"
+                for f, s in m["seleksi"].items() if f != m["family"]
             )
+            print(
+                f"[selesai] surrogate_{target}: {m['family']}  "
+                f"R2={m['cv_r2']:.4f}  MAE={m['cv_mae']:.4f}  "
+                f"n={m['n_rows']}  +-{c90['q']:.3f} @90% "
+                f"(cakupan {c90['coverage_empiris']:.1%})"
+            )
+            if kalah:
+                print(f"           dikalahkan: {kalah}")
 
     registry.MODELS_DIR.mkdir(exist_ok=True)
     metrics_path = registry.MODELS_DIR / "metrics.json"

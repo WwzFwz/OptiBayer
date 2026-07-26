@@ -227,26 +227,14 @@ def kpi(col, label: str, value: str, status: str, delta: str | None = None,
 
 
 def _persist_decision(hour: int, title: str, decision: str) -> None:
-    """Audit trail persisten: tiap keputusan advisory ditulis ke CSV
-    (data/processed/advisory_log.csv) — bertahan lintas restart/refresh,
-    melengkapi log sesi di st.session_state."""
-    try:
-        import csv
-        from datetime import datetime
-        from pathlib import Path
+    """Audit trail persisten — kini lewat src.advisory.audit.
 
-        p = (Path(__file__).resolve().parents[1]
-             / "data" / "processed" / "advisory_log.csv")
-        p.parent.mkdir(parents=True, exist_ok=True)
-        is_new = not p.exists()
-        with p.open("a", newline="", encoding="utf-8") as f:
-            w = csv.writer(f)
-            if is_new:
-                w.writerow(["waktu", "jam_sim", "judul", "keputusan"])
-            w.writerow([datetime.now().isoformat(timespec="seconds"),
-                        hour, title, decision])
-    except Exception:
-        pass  # audit file gagal ditulis tidak boleh mematikan dashboard
+    Penulisnya dipindah ke inti supaya frontend React & MCP memakai berkas dan
+    format yang SAMA; sebelumnya hanya Streamlit yang mencatat.
+    """
+    from src.advisory import audit
+
+    audit.append(hour, title, decision, sumber="streamlit")
 
 
 def advisory_card(card: dict, key: str):

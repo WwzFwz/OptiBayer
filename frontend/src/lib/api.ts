@@ -21,14 +21,47 @@ export type KPI = {
   precip_yield_pct: number;
 };
 
+/** Interval konformal: ±half dgn cakupan `level` (doc 14 C1). */
+export type Interval = {
+  lo: number; hi: number; half: number; level: number; coverage: number;
+};
+
+/** Guard out-of-distribution: apakah titik operasi masih dikuasai model. */
+export type Ood = {
+  ok: boolean;
+  n_out: number;
+  labels: string[];
+  komposisi_total_pct: number;
+  komposisi_wajar: boolean;
+  alasan: string[];
+};
+
+/** Hasil wasit fisika: prediksi ML vs neraca massa deterministik. */
+export type PhysicsCheck = {
+  ok: boolean;
+  n_gagal?: number;
+  gagal_label: string[];
+  rows: Array<{
+    target: string; label: string; ml: number; fisika: number;
+    selisih: number; tol: number; rasio?: number; ok: boolean;
+  }>;
+  error?: string;
+};
+
 export type HourData = {
   hour: number;
   fast: boolean;
   kpi: KPI;
+  interval?: Record<string, Interval | null>;
+  ood?: Ood;
+  physics_check?: PhysicsCheck;
   silika_level: "normal" | "warning" | "critical";
   cards: Card[];
   recommended_knobs: Record<string, number>;
   delta_if_followed: Record<string, number>;
+  /** "neraca massa eksak" | "selisih prediksi ML" — dasar angka janji delta */
+  delta_basis?: string;
+  delta_if_followed_ml?: Record<string, number>;
   na_balance: Record<string, number>;
   carbonation: Record<string, number>;
   al_balance?: Record<string, number>;
@@ -71,7 +104,38 @@ export type Sensitivity = {
   current: Record<string, number>;
   labels: Record<string, string>;
   out_of_bounds: string[];
+  ood?: Ood;
+  physics_check?: PhysicsCheck;
+  interval?: Record<string, Interval | null>;
 };
+
+/** Setpoint termurah yang masih mencapai target recovery (endpoint kontrak). */
+export type GoalSeek = {
+  knobs?: Record<string, number>;
+  prediction?: Record<string, number>;
+  feasible?: boolean;
+  note?: string;
+};
+
+export const goalSeek = (
+  composition: Record<string, number>, target_recovery: number,
+) => postOp("optimize/goal-seek", { composition, target_recovery })
+  .then((r) => (r.result ?? r) as GoalSeek);
+
+/** Kartu identitas model: metrik CV + lebar interval konformal per target. */
+export type ModelHealth = {
+  targets: Record<string, {
+    label: string; cv_r2: number; cv_mae: number; n_rows: number;
+    half_90: number | null;
+    conformal: Record<string, { q: number; coverage_empiris: number }>;
+    /** keluarga model dipilih per target lewat adu CV — bukan selalu LightGBM */
+    family?: string;
+    family_label?: string;
+    seleksi?: Record<string, { cv_r2: number; cv_mae: number }>;
+  }>;
+  catatan: string;
+};
+export const getModelHealth = () => get<ModelHealth>("/v1/model/health");
 export const getSensitivity = (
   composition: Record<string, number>, knobs: Record<string, number>,
 ) => postOp("sensitivity", { composition, knobs }) as Promise<Sensitivity>;
@@ -114,6 +178,24 @@ export async function addKnowledge(payload: {
 
 export const getContract = () =>
   get<Record<string, unknown>>("/v1/integration/contract");
+
+/** Audit trail keputusan advisory (persisten di server, bukan di memori). */
+export type AuditRow = {
+  waktu: string; jam_sim: string; judul: string;
+  keputusan: string; sumber?: string;
+};
+export const getAudit = (limit = 20) =>
+  get<{ n_total: number; decisions: AuditRow[] }>(`/v1/audit/decisions?limit=${limit}`);
+
+export async function catatKeputusan(
+  hour: number, title: string, decision: "terima" | "tolak",
+): Promise<void> {
+  const r = await fetch(`${API}/v1/audit/decision`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ hour, title, decision, sumber: "react" }),
+  });
+  if (!r.ok) throw new Error(`audit: ${r.status}`);
+}
 
 export type RegretData = {
   actual: Record<string, number>;

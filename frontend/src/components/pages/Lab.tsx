@@ -4,9 +4,13 @@ import { useState } from "react";
 import {
   Bar, BarChart, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { getSensitivity, postOp, Sensitivity } from "@/lib/api";
+import {
+  getModelHealth, getSensitivity, goalSeek, GoalSeek, ModelHealth,
+  postOp, Sensitivity,
+} from "@/lib/api";
 import { Spinner } from "@/components/ui/Feedback";
 import { useToast } from "@/components/ui/Toast";
+import { TrustBar } from "@/components/ui/Trust";
 import { C } from "@/lib/theme";
 
 const OXIDES = [
@@ -37,24 +41,50 @@ export default function Lab() {
   const [phys, setPhys] = useState<Record<string, number> | null>(null);
   const [sens, setSens] = useState<Sensitivity | null>(null);
   const [busy, setBusy] = useState(false);
+  const [health, setHealth] = useState<ModelHealth | null>(null);
+  const [targetRec, setTargetRec] = useState(88);
+  const [gs, setGs] = useState<GoalSeek | null>(null);
+  const [gsBusy, setGsBusy] = useState(false);
   const toast = useToast();
 
   const sum9 = Object.values(comp).reduce((a, b) => a + b, 0);
   const others = 100 - sum9;
+  const komposisiPenuh = () => ({ ...comp, others_pct: Math.max(others, 0) });
 
   async function run() {
     setBusy(true);
-    const full = { ...comp, others_pct: Math.max(others, 0) };
+    const full = komposisiPenuh();
     try {
-      const [p1, p2, s] = await Promise.all([
+      const [p1, p2, s, h] = await Promise.all([
         postOp("predict", { composition: full, knobs }),
         postOp("mass-balance", { composition: full, knobs }),
         getSensitivity(full, knobs),
+        getModelHealth().catch(() => null),
       ]);
       setMl(p1.result); setPhys(p2.result); setSens(s);
+      if (h) setHealth(h);
     } catch (e) {
       toast("error", `Gagal menghitung — cek backend (port 8000). ${e}`);
     } finally { setBusy(false); }
+  }
+
+  // Goal-seek: "berapa setpoint TERMURAH yang masih mencapai recovery X?".
+  // Endpoint-nya sudah ada di kontrak sejak awal tapi belum pernah punya UI —
+  // sebelumnya hanya bisa dipanggil lewat Python (doc 14 C5).
+  async function cariSetpoint() {
+    setGsBusy(true);
+    try {
+      const r = await goalSeek(komposisiPenuh(), targetRec);
+      setGs(r);
+      if (r.feasible === false) {
+        toast("info", `Recovery ${targetRec}% tidak tercapai untuk komposisi ini.`);
+      } else if (r.knobs) {
+        setKnobs({ ...knobs, ...r.knobs });
+        toast("success", "Setpoint termurah ditemukan & dimuat ke slider.");
+      }
+    } catch (e) {
+      toast("error", `Goal-seek gagal — cek backend. ${e}`);
+    } finally { setGsBusy(false); }
   }
 
   return (
@@ -82,11 +112,54 @@ export default function Lab() {
         </div>
       </div>
 
-      <button onClick={run} disabled={busy}
-        className="btn-lift inline-flex items-center gap-2 rounded-lg px-4 py-2 font-semibold"
-        style={{ background: C.accent, color: "#1a1408", opacity: busy ? 0.6 : 1 }}>
-        {busy && <Spinner />}{busy ? "Menghitung…" : "Prediksi (ML vs Fisika)"}
-      </button>
+      <div className="flex flex-wrap items-end gap-3">
+        <button onClick={run} disabled={busy}
+          className="btn-lift inline-flex items-center gap-2 rounded-lg px-4 py-2 font-semibold"
+          style={{ background: C.accent, color: "#1a1408", opacity: busy ? 0.6 : 1 }}>
+          {busy && <Spinner />}{busy ? "Menghitung…" : "Prediksi (ML vs Fisika)"}
+        </button>
+
+        {/* Goal-seek — arah terbalik: tentukan hasil, biar mesin cari setpoint */}
+        <div className="flex items-end gap-2 rounded-lg px-3 py-2"
+             style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
+          <label className="text-xs" style={{ color: C.ink2 }}>
+            <span className="mb-1 block">Target recovery (%)</span>
+            <input type="number" value={targetRec} min={70} max={99} step={0.5}
+                   onChange={(e) => setTargetRec(Number(e.target.value))}
+                   className="w-20 rounded px-2 py-1 tabular-nums"
+                   style={{ background: C.page, color: C.ink, border: `1px solid ${C.grid}` }} />
+          </label>
+          <button onClick={cariSetpoint} disabled={gsBusy}
+            className="btn-lift inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold"
+            style={{ background: C.page, color: C.ink,
+                     border: `1px solid ${C.grid}`, opacity: gsBusy ? 0.6 : 1 }}>
+            {gsBusy && <Spinner />}Cari setpoint termurah
+          </button>
+        </div>
+      </div>
+
+      {gs && (
+        <div className="rounded-xl p-3 text-sm"
+             style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
+          <p className="mb-1 font-semibold" style={{ color: C.ink }}>
+            Goal-seek: recovery ≥ {targetRec}%
+          </p>
+          {gs.feasible === false || !gs.prediction ? (
+            <p style={{ color: C.status.warning }}>
+              {gs.note ?? "Target tidak tercapai dalam amplop operasi aman."}
+            </p>
+          ) : (
+            <p style={{ color: C.ink2 }}>
+              Recovery {gs.prediction.recovery_pct?.toFixed(2)}% dengan OPEX{" "}
+              {gs.prediction.total_opex?.toLocaleString("id-ID", { maximumFractionDigits: 0 })}/jam.
+              Setpoint hasil pencarian sudah dimuat ke slider di atas — tekan
+              “Prediksi (ML vs Fisika)” untuk memverifikasinya dengan neraca massa.
+            </p>
+          )}
+        </div>
+      )}
+
+      {sens && <TrustBar ood={sens.ood} physics={sens.physics_check} />}
 
       {sens && sens.out_of_bounds.length > 0 && (
         <div className="rounded-lg p-3 text-sm"
@@ -100,9 +173,15 @@ export default function Lab() {
       {ml && phys && (
         <div className="rounded-xl p-3" style={{ background: C.surface, border: `1px solid ${C.grid}` }}>
           <div className="grid grid-cols-2 gap-4">
-            <Col title="🤖 Model ML (LightGBM)" data={ml} />
+            <Col title="🤖 Surrogate ML" data={ml} health={health} />
             <Col title="🧮 Kalkulator Fisika (Excel)" data={phys} />
           </div>
+          {health && (
+            <p className="mt-2 text-[0.68rem]" style={{ color: C.muted }}>
+              Keluarga model dipilih per target lewat adu validasi silang, jadi
+              tidak semuanya LightGBM — lihat label kecil di tiap baris.
+            </p>
+          )}
         </div>
       )}
 
@@ -165,18 +244,40 @@ function Slider({ label, val, min, max, step, onChange }: {
     </div>
   );
 }
-function Col({ title, data }: { title: string; data: Record<string, number> }) {
+function Col({ title, data, health }: {
+  title: string; data: Record<string, number>; health?: ModelHealth | null;
+}) {
   return (
     <div>
       <p className="mb-2 text-sm font-semibold" style={{ color: C.ink }}>{title}</p>
-      {TARGETS.map(([k, lbl, u]) => (
-        <div key={k} className="mb-1 flex justify-between text-sm">
-          <span style={{ color: C.muted }}>{lbl}</span>
-          <span style={{ color: C.ink }}>
-            {data[k] !== undefined ? `${data[k].toLocaleString("id-ID", { maximumFractionDigits: 1 })} ${u}` : "—"}
-          </span>
-        </div>
-      ))}
+      {TARGETS.map(([k, lbl, u]) => {
+        const info = health?.targets?.[k];
+        return (
+          <div key={k} className="mb-1 flex items-baseline justify-between gap-2 text-sm">
+            <span style={{ color: C.muted }}>
+              {lbl}
+              {info?.family && (
+                <span className="ml-1 text-[0.6rem] uppercase tracking-wide"
+                      title={info.family_label ?? info.family}
+                      style={{ color: C.muted, opacity: 0.75 }}>
+                  {info.family}
+                </span>
+              )}
+            </span>
+            <span className="text-right" style={{ color: C.ink }}>
+              {data[k] !== undefined
+                ? `${data[k].toLocaleString("id-ID", { maximumFractionDigits: 1 })} ${u}`
+                : "—"}
+              {info?.half_90 != null && (
+                <span className="ml-1 text-[0.68rem]" style={{ color: C.muted }}
+                      title={`Interval konformal 90% dari residual validasi silang`}>
+                  ±{info.half_90.toLocaleString("id-ID", { maximumFractionDigits: 2 })}
+                </span>
+              )}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -1,14 +1,30 @@
-pandas
-numpy
-scikit-learn
-lightgbm
-shap
-pymoo
-scipy
-plotly
-streamlit
-joblib
-requests
-python-dotenv
-fastapi
-uvicorn
+# Versi DIPATOK sengaja: sebelum ini semua paket ditulis polos tanpa versi,
+# sehingga `pip install -r requirements.txt` di mesin bersih pada hari-H bisa
+# menarik rilis baru yang memutus API (pandas 3, numpy 2, dst) dan mematikan
+# demo di depan juri. Angka di bawah = versi yang benar-benar dipakai saat
+# suite uji hijau.
+#
+# Perbarui dengan sengaja, lalu jalankan `python -m pytest` sebelum commit.
+# Kebutuhan pengembangan (pytest, ruff, httpx) ada di requirements-dev.txt.
+
+# --- inti data & model ---
+pandas==3.0.1
+numpy==2.0.2
+scikit-learn==1.5.2
+lightgbm==4.6.0
+shap==0.52.0
+joblib==1.4.2
+
+# --- optimizer & fisika ---
+pymoo==0.6.2
+scipy==1.14.1
+
+# --- antarmuka ---
+streamlit==1.59.1
+plotly==6.7.0
+fastapi==0.139.2
+uvicorn==0.32.1
+
+# --- utilitas ---
+requests==2.32.3
+python-dotenv==1.0.0

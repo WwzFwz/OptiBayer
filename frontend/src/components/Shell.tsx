@@ -1,12 +1,14 @@
 "use client";
 // Shell OptiBayer: rail ikon kiri + header + Panel Kendali overlay +
 // panel Advisory yang bisa di-dock (atas / kanan, via drag atau toggle).
-import { useState } from "react";
+import { useEffect, useRef } from "react";
 import { CircleAlert, Wifi, WifiOff } from "lucide-react";
+import { useToast } from "./ui/Toast";
 import Advisory from "./Advisory";
 import ControlPanel from "./ControlPanel";
 import Kpi from "./Kpi";
-import Rail, { PageId } from "./Rail";
+import Rail from "./Rail";
+import { PageId } from "@/lib/pages";
 import Overview from "./pages/Overview";
 import Diagram from "./pages/Diagram";
 import Digesti from "./pages/Digesti";
@@ -23,8 +25,21 @@ const REPLAY_FREE: PageId[] = ["lab", "knowledge", "integrasi"];
 
 export default function Shell() {
   const s = useStore();
-  const [page, setPage] = useState<PageId>("overview");
+  // halaman aktif hidup di store supaya ikut tersinkron ke URL (deep link)
+  const { page, setPage } = s;
   const monitoring = !REPLAY_FREE.includes(page);
+  const toast = useToast();
+
+  // Kalau server menolak mencatat keputusan, operator HARUS tahu — tombolnya
+  // sudah terlanjur memberi kesan "tercatat di audit".
+  const gagalTerakhir = useRef(0);
+  useEffect(() => {
+    if (s.gagalCatat > gagalTerakhir.current) {
+      gagalTerakhir.current = s.gagalCatat;
+      toast("error", "Keputusan GAGAL dicatat ke audit trail — cek backend, "
+                   + "lalu ulangi. Keputusan tadi dibatalkan.");
+    }
+  }, [s.gagalCatat, toast]);
 
   const day = Math.floor(s.hour / 24) + 1;
   const clock = s.hour % 24;

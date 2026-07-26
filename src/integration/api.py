@@ -22,10 +22,15 @@ os.environ.setdefault("ARROW_DEFAULT_MEMORY_POOL", "system")
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
-from fastapi import Body, FastAPI, HTTPException
+from fastapi import Body, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.integration import contract
+
+# Batas ukuran dokumen Knowledge Pack yang boleh dikirim lewat API (anti-abuse
+# bila instance ini pernah dipublikasikan). ~40 halaman teks sudah sangat cukup
+# untuk SOP pabrik.
+MAX_DOC_CHARS = 100_000
 
 
 @asynccontextmanager
@@ -51,9 +56,15 @@ app = FastAPI(
         "dashboard & MCP tools (src/integration/contract.py)."
     ),
 )
+# Asal frontend yang diizinkan. Default = dev lokal; saat deploy isi
+# CORS_ORIGINS (dipisah koma) dengan domain frontend sungguhan.
+_ORIGINS = [o.strip() for o in os.environ.get(
+    "CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+).split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -101,6 +112,26 @@ def _sequence(scenario_id: int):
     return replay.build_sequence(load_clean(), replay.SCENARIOS[scenario_id])
 
 
+@lru_cache(maxsize=256)
+def _pareto_hour(scenario_id: int, hour: int):
+    """Pareto NSGA-II satu jam — DI-CACHE.
+
+    Terukur 0.52 dtk/panggilan (60 populasi x 40 generasi = 2400 evaluasi
+    surrogate). Sebelum cache, tiap perpindahan jam menjalankannya DUA kali:
+    sekali dari /v1/operating-map (marker rekomendasi) dan sekali dari
+    /v1/pareto — yaitu ~1 dtk terbuang per klik, dan setiap tick mode Play.
+    Jam replay bersifat tetap, jadi hasilnya aman di-cache selama proses hidup.
+    """
+    from src.models import predict
+    from src.optimize import pareto
+
+    seq = _sequence(scenario_id)
+    row = seq.iloc[max(0, min(hour, len(seq) - 1))]
+    comp = predict.composition_of(row)
+    pf = pareto.pareto(comp)
+    return pf, pareto.pick(pf)
+
+
 @app.get("/v1/replay/{scenario_id}", tags=["frontend"],
          summary="Deret jam replay utk chart tren (scenario 0=normal, 1=spike)")
 def replay_sequence(scenario_id: int) -> dict:
@@ -126,13 +157,12 @@ def operating_map(scenario_id: int, hour: int, n: int = 20) -> dict:
 
     from src import schema
     from src.models import predict
-    from src.optimize import pareto
 
     seq = _sequence(scenario_id)
     row = seq.iloc[max(0, min(hour, len(seq) - 1))]
     comp = predict.composition_of(row)
     knobs = predict.knobs_of(row)
-    reco = pareto.pick(pareto.pareto(comp))
+    _, reco = _pareto_hour(scenario_id, hour)
     tb = schema.SAFE_BOUNDS["digester_temp_c"]
     nb_ = schema.SAFE_BOUNDS["naoh_conc_gl"]
     temps = np.linspace(*tb, n)
@@ -165,22 +195,26 @@ def operating_map(scenario_id: int, hour: int, n: int = 20) -> dict:
          summary="Pareto NSGA-II utk komposisi jam tertentu (+ radar knob)")
 def pareto_hour(scenario_id: int, hour: int) -> dict:
     from src import schema
-    from src.models import predict
-    from src.optimize import pareto
+    from src.models import predict, verify
 
     seq = _sequence(scenario_id)
     row = seq.iloc[max(0, min(hour, len(seq) - 1))]
     comp = predict.composition_of(row)
     knobs = predict.knobs_of(row)
-    pf = pareto.pareto(comp)
-    picked = pareto.pick(pf)
+    pf, picked = _pareto_hour(scenario_id, hour)
     cols = list(schema.KNOBS) + ["recovery_pct", "net_opex", "red_mud_t"]
+    reco_knobs = {k: float(picked[k]) for k in schema.KNOBS}
     return {
         "solutions": pf[cols].round(3).to_dict(orient="records"),
         "picked": {k: round(float(picked[k]), 3) for k in cols},
         "bounds": {k: schema.SAFE_BOUNDS[k] for k in schema.KNOBS},
         "now_knobs": {k: round(v, 3) for k, v in knobs.items()},
         "labels": {k: schema.label(k) for k in schema.KNOBS},
+        # kepercayaan pilihan: interval konformal + guard OOD + wasit fisika
+        "interval": {t: predict.interval(t, float(picked[t]))
+                     for t in ("recovery_pct", "red_mud_t") if t in picked},
+        "ood": predict.ood_report(comp, reco_knobs),
+        "physics_check": verify.verify(comp, reco_knobs),
     }
 
 
@@ -273,6 +307,17 @@ def sensitivity(payload: dict = Body(...)) -> dict:
     wb = predict.within_bounds(comp, knobs, target)
     out_of_bounds = [schema.label(f) for f, ok in wb.items() if not ok]
 
+    # guard OOD lengkap + wasit fisika utk titik yang diketik operator sendiri
+    from src.models import verify as _verify
+
+    ood = predict.ood_report(comp, knobs, target)
+    try:
+        physics_check = _verify.verify(comp, knobs)
+    except Exception as e:
+        physics_check = {"ok": True, "rows": [], "gagal_label": [],
+                         "error": f"{type(e).__name__}: {e}"}
+    titik = predict.predict_one(comp, knobs)
+
     return {
         "target": target,
         "curves": curves,
@@ -280,20 +325,121 @@ def sensitivity(payload: dict = Body(...)) -> dict:
         "current": {k: round(float(knobs[k]), 2) for k in schema.KNOBS},
         "labels": {k: schema.label(k) for k in schema.KNOBS},
         "out_of_bounds": out_of_bounds,
+        "ood": ood,
+        "physics_check": physics_check,
+        "interval": {t: predict.interval(t, v) for t, v in titik.items()},
     }
+
+
+@app.get("/v1/model/health", tags=["meta"],
+         summary="Kesehatan model: metrik CV, interval konformal, cakupan")
+def model_health() -> dict:
+    """Kartu identitas model — dipakai UI utk menampilkan ketidakpastian jujur.
+
+    Sengaja READ-ONLY & murah: hanya membaca metadata registry, tidak melatih
+    dan tidak menjalankan studi fidelitas (itu tugas `python -m src.models.verify`).
+    """
+    from src.models import predict
+
+    out = {}
+    for t in predict.available_targets():
+        m = predict.meta(t).get("metrics", {})
+        conf = m.get("conformal", {})
+        out[t] = {
+            "label": _label(t),
+            "cv_r2": m.get("cv_r2"),
+            "cv_mae": m.get("cv_mae"),
+            "n_rows": m.get("n_rows"),
+            "conformal": conf,
+            "half_90": predict.halfwidth(t, 0.90),
+            # keluarga model dipilih PER TARGET lewat adu validasi silang
+            # (doc 14 C2), jadi UI tidak boleh menulis "LightGBM" begitu saja.
+            "family": m.get("family"),
+            "family_label": m.get("family_label"),
+            "seleksi": m.get("seleksi", {}),
+        }
+    return {
+        "targets": out,
+        "catatan": (
+            "Target data latih dihasilkan ulang oleh kalkulator neraca massa "
+            "(src/data/rebuild_targets.py), sehingga R² tinggi berarti "
+            "surrogate setia meniru KALKULATOR — bukan bukti akurasi pabrik "
+            "nyata (doc 14 A1). Interval konformal di sini adalah galat "
+            "surrogate terhadap kalkulator itu."
+        ),
+    }
+
+
+def _label(col: str) -> str:
+    from src import schema
+
+    return schema.label(col)
+
+
+@app.post("/v1/audit/decision", tags=["frontend"],
+          summary="Catat keputusan advisory operator (audit trail persisten)")
+def audit_decision(payload: dict = Body(...),
+                   x_write_token: str = Header(default="")) -> dict:
+    """Satu-satunya cara frontend React mencatat keputusan terima/tolak.
+
+    Tanpa endpoint ini, keputusan di React hanya hidup di memori browser dan
+    hilang saat refresh — sementara halaman Audit Trail hanya menampilkan
+    keputusan dari Streamlit. Formatnya identik karena penulisnya sama
+    (src/advisory/audit.py).
+    """
+    from src.advisory import audit
+
+    expected = os.environ.get("OPTIBAYER_WRITE_TOKEN", "").strip()
+    if expected and x_write_token != expected:
+        raise HTTPException(
+            401, "Header X-Write-Token salah/absen (endpoint tulis dilindungi)")
+
+    judul = (payload.get("title") or "").strip()
+    keputusan = (payload.get("decision") or "").strip()
+    if not judul:
+        raise HTTPException(400, "title wajib diisi")
+    if keputusan not in audit.KEPUTUSAN_SAH:
+        raise HTTPException(
+            400, f"decision harus salah satu dari {audit.KEPUTUSAN_SAH}")
+    if len(judul) > 300:
+        raise HTTPException(413, "title terlalu panjang (maks 300 karakter)")
+
+    ok = audit.append(int(payload.get("hour", 0)), judul, keputusan,
+                      sumber=str(payload.get("sumber", "react"))[:32])
+    if not ok:
+        raise HTTPException(500, "gagal menulis audit trail di server")
+    return {"ok": True, "tercatat": {"hour": payload.get("hour", 0),
+                                     "title": judul, "decision": keputusan}}
+
+
+@app.get("/v1/audit/decisions", tags=["frontend"],
+         summary="Baca audit trail keputusan advisory")
+def audit_decisions(limit: int = 20) -> dict:
+    from src.advisory import audit
+
+    return audit.read(limit=limit)
 
 
 @app.post("/v1/knowledge/add", tags=["frontend"],
           summary="Tambah dokumen Knowledge Pack (nama, tag, isi) — langsung dipakai AI")
-def knowledge_add(payload: dict = Body(...)) -> dict:
+def knowledge_add(payload: dict = Body(...),
+                  x_write_token: str = Header(default="")) -> dict:
     import re
 
     from src.advisory import knowledge
+
+    expected = os.environ.get("OPTIBAYER_WRITE_TOKEN", "").strip()
+    if expected and x_write_token != expected:
+        raise HTTPException(
+            401, "Header X-Write-Token salah/absen (endpoint tulis dilindungi)")
 
     name = (payload.get("name") or "").strip()
     body = (payload.get("body") or "").strip()
     if not name or not body:
         raise HTTPException(400, "name & body wajib diisi")
+    if len(body) > MAX_DOC_CHARS or len(name) > 120:
+        raise HTTPException(
+            413, f"dokumen terlalu besar (maks {MAX_DOC_CHARS:,} karakter)")
 
     # tag: gabungan tag chart terpilih + tag bebas
     tags: list[str] = []
@@ -402,10 +548,16 @@ def replay_hour(scenario_id: int, hour: int, fast: bool = True) -> dict:
         "hour": hour,
         "fast": fast,
         "kpi": kpi,
+        # ketidakpastian & pemeriksaan kepercayaan (doc 14 C1/C3)
+        "interval": ctx["interval_now"],
+        "ood": ctx["ood"],
+        "physics_check": ctx["physics_check"],
         "silika_level": ctx["silika_level"],
         "cards": cards,
         "recommended_knobs": ctx["recommended_knobs"],
         "delta_if_followed": ctx["delta_if_followed"],
+        "delta_basis": ctx.get("delta_basis"),
+        "delta_if_followed_ml": ctx.get("delta_if_followed_ml"),
         "na_balance": ctx["na_balance"],
         "carbonation": ctx["carbonation"],
         "al_balance": {

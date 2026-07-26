@@ -16,7 +16,6 @@ Semua operasi READ-ONLY terhadap pabrik (doc 07 keamanan).
 from __future__ import annotations
 
 import time
-from typing import Any, Callable
 
 from src import schema
 
@@ -75,15 +74,8 @@ def _op_knowledge(p: dict) -> dict:
 
 
 def _op_audit(p: dict) -> dict:
-    import pandas as pd
-    from pathlib import Path
-    path = (Path(__file__).resolve().parents[2]
-            / "data" / "processed" / "advisory_log.csv")
-    if not path.exists():
-        return {"n_total": 0, "decisions": []}
-    df = pd.read_csv(path)
-    return {"n_total": int(len(df)),
-            "decisions": df.tail(int(p.get("limit", 20))).to_dict(orient="records")}
+    from src.advisory import audit
+    return audit.read(limit=int(p.get("limit", 20)))
 
 
 ENDPOINTS: list[dict] = [

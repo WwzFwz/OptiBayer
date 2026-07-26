@@ -1,0 +1,6 @@
+# Kebutuhan pengembangan & CI (tidak dibutuhkan untuk menjalankan dashboard).
+-r requirements.txt
+
+pytest==9.0.1
+httpx==0.28.1          # dipakai fastapi.testclient
+ruff==0.9.6            # linter + pemformat
