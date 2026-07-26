@@ -1,5 +1,13 @@
 # 13 — Panduan Setup & Menjalankan Project (untuk anggota tim)
 
+> ⚠️ **DOKUMEN INI MENDAHULUI PENSIUNNYA STREAMLIT.**
+> Konsol Streamlit sudah dikeluarkan dari `main` — UI sekarang **Next.js + React**
+> (`frontend/`) di atas REST API yang sama. Semua instruksi `streamlit run
+> app/main.py` di bawah **tidak lagi berlaku di `main`**; ia tetap berjalan di
+> branch arsip `feat/old-ada-streamlit`. Cara menjalankan & deploy yang berlaku
+> sekarang ada di [README](../README.md).
+> Isi dokumen ini sengaja dibiarkan utuh sebagai catatan sejarah keputusan tim.
+
 > Target pembaca: anggota tim yang baru clone repo dan mau menjalankan +
 > mencoba semua fitur AI RED MUD di laptopnya sendiri.
 

@@ -1,5 +1,13 @@
 # 16 — Tutorial Deploy (Streamlit Community Cloud + opsi lain)
 
+> ⚠️ **DOKUMEN INI MENDAHULUI PENSIUNNYA STREAMLIT.**
+> Konsol Streamlit sudah dikeluarkan dari `main` — UI sekarang **Next.js + React**
+> (`frontend/`) di atas REST API yang sama. Semua instruksi `streamlit run
+> app/main.py` di bawah **tidak lagi berlaku di `main`**; ia tetap berjalan di
+> branch arsip `feat/old-ada-streamlit`. Cara menjalankan & deploy yang berlaku
+> sekarang ada di [README](../README.md).
+> Isi dokumen ini sengaja dibiarkan utuh sebagai catatan sejarah keputusan tim.
+
 > Target: juri bisa membuka dashboard lewat LINK, tanpa install apa pun.
 > Waktu setup ±15 menit, gratis. Repo sudah siap deploy (requirements.txt ✔,
 > auto-train saat boot ✔, data ikut repo ✔, .env di-gitignore ✔).

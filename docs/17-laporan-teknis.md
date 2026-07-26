@@ -1,5 +1,13 @@
 # 17 — Laporan Teknis OptiBayer
 
+> ⚠️ **DOKUMEN INI MENDAHULUI PENSIUNNYA STREAMLIT.**
+> Konsol Streamlit sudah dikeluarkan dari `main` — UI sekarang **Next.js + React**
+> (`frontend/`) di atas REST API yang sama. Semua instruksi `streamlit run
+> app/main.py` di bawah **tidak lagi berlaku di `main`**; ia tetap berjalan di
+> branch arsip `feat/old-ada-streamlit`. Cara menjalankan & deploy yang berlaku
+> sekarang ada di [README](../README.md).
+> Isi dokumen ini sengaja dibiarkan utuh sebagai catatan sejarah keputusan tim.
+
 > Dokumen konsolidasi untuk laporan/submission: metode & algoritma (dengan
 > diagram Mermaid — dirender otomatis oleh GitHub), fitur, data, hasil, dan
 > cara menjalankan. Rujukan detail: doc 06 (analisis), 09 (arsitektur),

@@ -1,5 +1,6 @@
-# Backend OptiBayer: REST API (default) atau dashboard Streamlit.
-# Satu image, dua peran — dipilih lewat `command` di docker-compose.yml.
+
+# Backend OptiBayer: REST API — satu-satunya jalan masuk ke inti Python.
+# Frontend Next.js punya image sendiri (frontend/Dockerfile).
 
 FROM python:3.12-slim
 
@@ -19,18 +20,16 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ ./src/
-COPY app/ ./app/
 COPY data/ ./data/
 COPY knowledge/ ./knowledge/
 COPY models/metrics.json ./models/
-COPY .streamlit/ ./.streamlit/
 
 # Latih surrogate SAAT BUILD, bukan saat container start: artefak .joblib tidak
 # ikut di git (lihat .gitignore), dan kalau dilatih saat start, permintaan
 # pertama juri akan menunggu ~10 detik.
 RUN python -m src.models.train --quiet
 
-EXPOSE 8000 8501
+EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -fsS http://localhost:8000/v1/health || exit 1

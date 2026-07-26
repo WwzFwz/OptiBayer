@@ -20,8 +20,11 @@ pymoo==0.6.2
 scipy==1.14.1
 
 # --- antarmuka ---
-streamlit==1.59.1
-plotly==6.7.0
+# Streamlit & plotly DIHAPUS: konsol Streamlit dipensiunkan dari main sejak
+# frontend Next.js jadi UI tunggal. Kodenya diarsipkan di branch
+# `feat/old-ada-streamlit` (lengkap dengan seluruh upgrade), bukan dibuang.
+# Keduanya dulu HANYA dipakai app/ — inti src/ tidak pernah menyentuhnya,
+# yang justru membuktikan klaim arsitektur headless.
 fastapi==0.139.2
 uvicorn==0.32.1
 

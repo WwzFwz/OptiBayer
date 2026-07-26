@@ -1,33 +1,27 @@
 # OptiBayer — Bayer Process Advisor + CRO Console (ANTAM Hackathon)
 
 **Solusi:** dashboard monitoring + advisory untuk Control Room Operator (CRO).
-Neuro-symbolic digital twin: surrogate ML (LightGBM) + fisika neraca massa +
-optimizer multi-objektif (NSGA-II, carbon-aware) + advisory ber-grounding +
-pengetahuan expert (Knowledge Pack). Input: komposisi bauksit & kondisi operasi.
+Neuro-symbolic digital twin: surrogate ML + fisika neraca massa + optimizer
+multi-objektif (NSGA-II, carbon-aware) + advisory ber-grounding + pengetahuan
+expert (Knowledge Pack). Input: komposisi bauksit & kondisi operasi.
 Output: rekomendasi setpoint yang **memaksimalkan recovery Al, meminimalkan
 OPEX (NaOH/CaO), meminimalkan red mud** — plus kuantifikasi CCUS karbonasi red
 mud (23 kg CO₂/ton, paper 2026).
 
-**Dua wajah, satu otak (headless):** inti Python dipakai oleh DUA frontend —
-**Streamlit** (cepat, lengkap) dan **Next.js + React** (UI produksi) — keduanya
-lewat REST API yang sama (`src/integration/api.py`). Bukti arsitektur
-data-agnostic: ganti/ tambah frontend tanpa menyentuh logika.
+**Inti headless, klien berganti tanpa menyentuh logika.** Seluruh kecerdasan ada
+di `src/` dan diakses lewat SATU kontrak (`src/integration/contract.py`) yang
+melahirkan tiga antarmuka sekaligus: REST API, server MCP untuk agen AI, dan
+halaman playground. Klaim ini bukan retorika — konsol Streamlit yang dulu jadi
+UI utama sudah dipensiunkan dari `main` **tanpa mengubah satu baris pun di
+`src/`**. Arsipnya lengkap di branch `feat/old-ada-streamlit`.
+
+UI saat ini: **Next.js + React** (`frontend/`).
 
 ---
 
 ## Menjalankan
 
-### A. Dashboard Streamlit (paling cepat — satu proses)
-
-```bash
-pip install -r requirements.txt
-python -m streamlit run app/main.py     # buka http://localhost:8501
-```
-
-Model dilatih otomatis saat boot pertama (~30 dtk). Pilih skenario
-**"Gangguan: Silika Spike"** → tekan ▶ Play untuk alur demo terbaik.
-
-### B. Frontend Next.js + REST API (UI React — butuh 2 proses)
+### A. Frontend Next.js + REST API (2 proses)
 
 **Terminal 1 — backend API (Python):**
 ```bash
@@ -46,11 +40,10 @@ npm run dev                              # buka http://localhost:3000
 Frontend memanggil API di `http://localhost:8000` (indikator "API tersambung"
 di kanan atas). Kalau backend belum jalan, muncul instruksi menyalakannya.
 
-### C. Docker — satu perintah (paling ringkas untuk juri)
+### B. Docker — satu perintah (paling ringkas untuk juri)
 
 ```bash
-docker compose up --build                       # API :8000 + React :3000
-docker compose --profile streamlit up --build   # + Streamlit :8501
+docker compose up --build     # API :8000 + React :3000
 ```
 
 Model dilatih saat build image, jadi permintaan pertama tidak menunggu.
@@ -58,8 +51,7 @@ Model dilatih saat build image, jadi permintaan pertama tidak menunggu.
 ### Uji
 
 ```bash
-python -m pytest                 # semua (termasuk Streamlit end-to-end)
-python -m pytest -m "not slow"   # cepat saja (~45 dtk) — dipakai saat ngoding
+python -m pytest                 # semua (~1 menit)
 python -m pytest tests/test_model_trust.py   # interval, guard OOD, wasit fisika
 ```
 
@@ -89,7 +81,7 @@ Tanpa LLM, semua fitur AI tetap jalan dengan ringkasan template.
 
 ---
 
-## Fitur (setara penuh di Streamlit & React)
+## Fitur
 
 | Halaman | Fitur |
 |---|---|
@@ -120,12 +112,12 @@ bukan label yang ditulis tangan. Bukti & metodologi: **[docs/21](docs/21-benchma
 Model dipilih **per target** lewat adu validasi silang, bukan preferensi:
 recovery & red mud → ridge-polinomial, OPEX → LightGBM, yield → HistGB.
 
-## Arsitektur (headless, 3 klien di atas 1 inti)
+## Arsitektur (headless — klien boleh berganti, inti tidak)
 
 ```
-                    ┌─ Streamlit CRO Console (app/)
-Inti Python ────────┤─ Next.js + React (frontend/)   ── REST API (src/integration/api.py)
-(predict/optimize/  └─ MCP server (src/integration/mcp_server.py)
+                    ┌─ Next.js + React (frontend/) ── REST API (src/integration/api.py)
+Inti Python ────────┤─ MCP server (agen AI)        ── src/integration/mcp_server.py
+(predict/optimize/  └─ [arsip] Streamlit CRO Console  → branch feat/old-ada-streamlit
  mass_balance/       ↑
  advisory/knowledge) data historian / OPC UA (produksi)
 ```
@@ -148,7 +140,6 @@ antam-hackathon/
 │   ├── advisory/   context · template · providers (LLM) · knowledge
 │   └── integration/ contract · api (FastAPI REST) · mcp_server
 ├── models/                    ← artefak + metrics.json
-├── app/                       ← Streamlit (main.py + ui.py + views/)
 ├── frontend/                  ← Next.js + React (src/components + lib)
 └── tests/                     ← uji per milestone
 ```
@@ -163,4 +154,4 @@ antam-hackathon/
 ## Mulai dari mana?
 
 1. `docs/01` konteks bisnis → `docs/06` analisis lengkap → `docs/17` laporan teknis.
-2. Jalankan (A) Streamlit atau (B) React, pilih skenario **"Silika Spike"**, ▶ Play.
+2. Jalankan (A) React atau (B) Docker, pilih skenario **"Silika Spike"**, ▶ Play.

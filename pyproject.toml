@@ -10,7 +10,7 @@ testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q --strict-markers"
 markers = [
-    "slow: uji yang menjalankan seluruh aplikasi Streamlit / melatih ulang model (pytest -m 'not slow' untuk melewatinya)",
+    "slow: uji yang berjalan lama, mis. melatih ulang model (pytest -m 'not slow' untuk melewatinya)",
 ]
 filterwarnings = [
     "ignore::DeprecationWarning",
@@ -21,6 +21,7 @@ filterwarnings = [
 line-length = 95
 target-version = "py311"
 exclude = ["frontend", "notebooks", ".venv", "data"]
+
 
 [tool.ruff.lint]
 select = [
@@ -40,10 +41,3 @@ ignore = [
 # Tes boleh memakai fixture pytest yang "tidak terpakai" secara statis
 # dan menyentuh helper privat modul yang diujinya.
 "tests/*" = ["F811", "ARG001", "SLF001"]
-
-# app/ui.py menukar seluruh palet chart lewat `globals().update()` (baris 44),
-# jadi nama seperti SURFACE/INK/GRID/SERIES memang tidak terlihat oleh analisis
-# statis walau ada saat runtime — diverifikasi oleh tes toggle tema di
-# tests/test_app.py. Ini penekanan yang DISENGAJA & terdokumentasi, bukan
-# kebocoran linter.
-"app/ui.py" = ["F821"]

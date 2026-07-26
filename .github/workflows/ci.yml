@@ -42,11 +42,8 @@ jobs:
         # masih jalan dari nol.
         run: python -m src.models.train
 
-      - name: Pytest (cepat)
-        run: python -m pytest -m "not slow"
-
-      - name: Pytest (lambat — Streamlit end-to-end)
-        run: python -m pytest -m slow
+      - name: Pytest
+        run: python -m pytest
 
       - name: Uji fidelitas surrogate vs fisika
         run: python -m src.models.verify -n 80
