@@ -88,30 +88,38 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // ketidakcocokan hidrasi.
   const urlSiap = useRef(false);
 
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
+  // HATI-HATI: `URLSearchParams.get` mengembalikan null kalau parameter tidak
+  // ada, dan `Number(null) === 0`. Kalau nilai mentahnya tidak diperiksa lebih
+  // dulu, membuka aplikasi di "/" polos akan diam-diam memaksa skenario ke 0
+  // (Operasi Normal) dan jam ke 0 — bukan default demo (spike, jam 8).
+  const terapkanUrl = useCallback((q: URLSearchParams) => {
     const p = q.get("p");
-    const s = Number(q.get("s"));
-    const h = Number(q.get("h"));
+    if (isPageId(p)) setPageRaw(p);
+
+    const sMentah = q.get("s");
+    if (sMentah !== null) {
+      const s = Number(sMentah);
+      if (s === 0 || s === 1) setScenarioRaw(s);
+    }
+
+    const hMentah = q.get("h");
+    if (hMentah !== null) {
+      const h = Number(hMentah);
+      if (Number.isFinite(h) && h >= 0) setHour(Math.floor(h));
+    }
+  }, []);
+
+  useEffect(() => {
     // sinkronisasi dgn sistem eksternal (URL) — bukan turunan state lain
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (isPageId(p)) setPageRaw(p);
-    if (s === 0 || s === 1) setScenarioRaw(s);
-    if (Number.isFinite(h) && h >= 0) setHour(Math.floor(h));
+    terapkanUrl(new URLSearchParams(window.location.search));
     urlSiap.current = true;
 
-    const kembali = () => {
-      const q2 = new URLSearchParams(window.location.search);
-      const p2 = q2.get("p");
-      const s2 = Number(q2.get("s"));
-      const h2 = Number(q2.get("h"));
-      if (isPageId(p2)) setPageRaw(p2);
-      if (s2 === 0 || s2 === 1) setScenarioRaw(s2);
-      if (Number.isFinite(h2) && h2 >= 0) setHour(Math.floor(h2));
-    };
+    const kembali = () =>
+      terapkanUrl(new URLSearchParams(window.location.search));
     window.addEventListener("popstate", kembali);
     return () => window.removeEventListener("popstate", kembali);
-  }, []);
+  }, [terapkanUrl]);
 
   // Tulis balik ke URL. `replaceState` dipakai untuk jam/skenario supaya
   // menggeser slider tidak membanjiri riwayat browser; perpindahan HALAMAN
