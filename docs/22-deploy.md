@@ -103,14 +103,57 @@ Tentukan kedua nama itu **di awal**, lalu isi semua env var sekaligus.
 `render.yaml` sudah berisi definisinya (backend saja — lihat komentar di
 berkasnya soal kenapa frontend tidak ada di situ).
 
+### Verifikasi kartu
+
+Render meminta kartu untuk **verifikasi identitas** (otorisasi sementara $1 yang
+dilepas kembali), bukan tagihan. Selama **Instance Type = Free**, tidak ada yang
+ditagih. Kalau kartunya ditolak berulang, itu biasanya kartu virtual/prabayar
+yang tidak mendukung pre-auth USD — pakai kartu kredit terbitan bank, atau kartu
+debit yang sudah diaktifkan untuk transaksi internasional.
+
+### Jalur Blueprint (kalau tersedia)
+
 1. Pastikan repo sudah ter-push ke GitHub (`WwzFwz/OptiBayer`).
 2. Render Dashboard → **New → Blueprint** → pilih repo ini.
 3. Render membaca `render.yaml`, membangun `Dockerfile` di root, dan menyalakan
    `optibayer-api` di region `singapore`.
-4. Build melatih surrogate (`Dockerfile:30`, ~14 dtk) — jadi model ikut di
-   dalam image, tidak dilatih saat start.
-5. Sebelum lanjut, pastikan `CORS_ORIGINS` di dashboard **persis** sama dengan
-   domain Vercel yang akan kamu pakai.
+
+Kalau repo-mu tidak muncul di daftar, GitHub App Render belum diberi akses:
+**Configure account** → pilih akunmu → tambahkan `OptiBayer` ke *Repository
+access*. Repo yang baru diganti nama kadang perlu koneksi GitHub dipasang ulang.
+
+### Jalur manual (kalau Blueprint terhalang)
+
+**New → Web Service**, lalu isi sendiri — `render.yaml` tidak dibaca di jalur
+ini, jadi env var harus diketik manual:
+
+| Field | Isi |
+|---|---|
+| Language / Runtime | **Docker** |
+| Branch | `main` |
+| Region | **Singapore** |
+| Root Directory | *(kosong)* |
+| Dockerfile Path | `./Dockerfile` |
+| Instance Type | **Free** |
+| Health Check Path | `/v1/health` |
+
+Root Directory dikosongkan karena `Dockerfile` ada di root dan build-nya butuh
+`src/`, `data/`, `requirements.txt` yang juga di root.
+
+Env var (Advanced): `CORS_ORIGINS`, `LLM_PROVIDER=template`, dan
+`OPTIBAYER_WRITE_TOKEN` — yang terakhir harus kamu buat sendiri di jalur ini
+karena `generateValue: true` cuma berlaku lewat Blueprint:
+
+```powershell
+$b = [byte[]]::new(24)
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+($b | ForEach-Object { '{0:x2}' -f $_ }) -join ''
+```
+
+### Setelah hidup
+
+Build melatih surrogate (`Dockerfile:30`, ~14 dtk di laptop, lebih lama di
+Render) — model ikut di dalam image, tidak dilatih saat start.
 
 ```bash
 curl https://optibayer-api.onrender.com/v1/health
@@ -139,6 +182,19 @@ Next.js-nya ada di subdirektori, jadi satu pengaturan wajib diubah:
 
 5. Deploy. Nama project menentukan domainnya — pastikan cocok dengan yang sudah
    diisikan ke `CORS_ORIGINS` di Render.
+
+> **Domainnya jelek?** Vercel menurunkan nama dari repo (`OptiBayer` →
+> `opti-bayer`) dan menambah sufiks acak kalau sudah dipakai orang lain, mis.
+> `opti-bayer-23b4.vercel.app`. Tidak perlu deploy ulang: **Settings → Domains →
+> Add Domain** → ketik nama yang kamu mau. Domain lama tetap hidup sebagai alias,
+> jadi tidak ada link yang mati. **Yang dipakai sekarang:
+> `https://optibayer.vercel.app`.**
+
+> **Mengubah env var di Vercel butuh Redeploy**, bukan restart — env terikat ke
+> deployment, jadi nilai baru tidak dipakai sampai **Deployments → ⋯ →
+> Redeploy**. Beda dari Render yang cukup Save lalu restart sendiri. Pastikan
+> juga centang **Production** aktif; kalau hanya Preview, domain utama tetap
+> memakai nilai lama.
 
 Alamat API dibaca **saat runtime** lewat `frontend/src/app/layout.tsx:30`, bukan
 ditanam ke bundle. Artinya kalau backend pindah, cukup ubah env var lalu
@@ -206,31 +262,78 @@ sebagai cadangan.
 
 ---
 
-## Kenapa bukan Hugging Face Spaces (dan yang lain)
+## Kandidat yang gugur, dan kenapa
 
-Dicatat supaya tidak dievaluasi ulang dari nol nanti. Status per **Juli 2026**:
+Dicatat supaya tidak dievaluasi ulang dari nol. Semuanya **diuji langsung**, bukan
+dibaca dari halaman pricing. Status per **27 Juli 2026**:
 
 | Kandidat | Status | Sebab |
 |---|---|---|
-| **HF Spaces** | ❌ gugur | Docker **dan** Gradio SDK kini menuntut langganan PRO / kredit di cpu-basic. Hanya Static Space (HTML/JS, tanpa Python) yang masih gratis. Diubah tanpa pengumuman — halaman dokumentasi Docker Spaces sampai sekarang tidak menyebutnya |
-| **Vercel Python Function** | ❌ gugur | Batas bundle serverless 250 MB. scipy + scikit-learn + lightgbm + shap + pymoo + pandas sudah 400–600 MB. Tidak akan pernah muat |
-| **Fly.io / Railway / Cloud Run / Koyeb** | ❌ gugur | Semua menuntut kartu di depan |
-| **Bekukan data, buang backend** | ❌ gugur | Halaman monitoring memang bisa distatiskan, tapi `/v1/sensitivity`, `/v1/operating-map`, `/v1/pareto`, `/v1/active-learning` menghitung dari input yang juri ketik sendiri. Membekukannya membuat Prediction Lab jadi pajangan — justru bagian yang paling membuktikan klaim proposal |
-| **Render free** | ✅ dipakai | Docker tanpa kartu, 512 MB cukup (terukur 281 MB), region Singapore |
+| **HF Spaces** | ❌ | Docker **dan** Gradio SDK menuntut langganan PRO/kredit di cpu-basic. Hanya Static Space (HTML/JS, tanpa Python) yang gratis. Diubah tanpa pengumuman — dokumentasi Docker Spaces sampai kini tidak menyebutnya |
+| **Railway** | ❌ | Free tier permanen sudah tidak ada, tinggal kredit trial |
+| **Koyeb** | ❌ | Setelah diakuisisi Mistral (Feb 2026), **pendaftaran baru ke tier gratis ditutup**; fokus dialihkan ke inferensi AI dan enterprise |
+| **FastAPI Cloud** | ❌ | Lihat catatan `libgomp` di bawah — bukan soal kartu, tapi pustaka sistem |
+| **Vercel Python Function** | ❌ | Batas bundle serverless 250 MB. scipy + scikit-learn + lightgbm + shap + pymoo + pandas sudah 400–600 MB |
+| **Fly.io / Cloud Run** | ❌ | Menuntut kartu di depan |
+| **Bekukan data, buang backend** | ❌ | Halaman monitoring bisa distatiskan, tapi `/v1/sensitivity`, `/v1/operating-map`, `/v1/pareto`, `/v1/active-learning` menghitung dari input yang juri ketik sendiri. Membekukannya membuat Prediction Lab jadi pajangan — justru bagian yang paling membuktikan klaim proposal |
+| **Render free** | ✅ | Docker penuh, 512 MB cukup (terukur 281 MB), region Singapore |
+
+### Jebakan `libgomp` — kenapa platform "Python murni" tidak cukup
+
+FastAPI Cloud sempat berhasil di-deploy sepenuhnya: build lulus, app hidup,
+`/v1/health`, `/v1/spec`, `/v1/replay/{id}`, dan `/v1/knowledge` semua 200. Yang
+gagal hanya endpoint yang menyentuh model, dengan:
+
+```
+OSError: libgomp.so.1: cannot open shared object file
+  ← lightgbm/libpath.py: ctypes.cdll.LoadLibrary(lib_lightgbm.so)
+  ← joblib.load(surrogate_total_opex.joblib)
+```
+
+`lib_lightgbm.so` menautkan OpenMP secara **dinamis**. Itu paket sistem
+(`apt install libgomp1`), bukan paket Python — tidak bisa dipasang lewat
+`requirements.txt` maupun `pyproject.toml`. `Dockerfile:9` memasangnya sejak
+awal, jadi seluruh jalur Docker aman; yang tidak aman adalah platform yang
+membangun environment Python sendiri dan tidak memberi kendali atas image dasar.
+
+Kegagalannya juga **senyap dan menyesatkan**: `registry.available()` hanya
+mengembalikan daftar kosong kalau artefak tidak ada, sehingga `/v1/model/health`
+sempat membalas `200` dengan `{"targets":{}}` — terlihat sehat padahal tidak ada
+satu pun model yang termuat.
+
+> **Aturan praktis:** kalau sebuah platform tidak memakai `Dockerfile` kita, uji
+> `/v1/replay/1/hour/8` — bukan `/v1/health` — sebelum menyatakan deploy berhasil.
+> Endpoint itu yang pertama kali memuat model.
+
+Kalau suatu saat LightGBM harus dilepas supaya bisa jalan di platform non-Docker,
+biayanya sudah terukur di `models/metrics.json`: hanya `total_opex` yang
+memakainya, dan penggantinya (`hist_gbdt`, murni scikit-learn yang membawa
+OpenMP di dalam wheel) memberi **R² 0.9454 → 0.9416**. Tiga target lain sudah
+scikit-learn sejak awal.
 
 ---
 
 ## Urutan pengerjaan (± 30 menit)
 
 1. Tentukan dua nama: project Vercel dan service Render. Tulis kedua URL-nya.
-2. A1 — Blueprint di Render, tunggu build, **cek URL asli di dashboard**.
-3. `curl <api>/v1/health` sampai hijau.
+2. A1 — Render, tunggu build, **cek URL asli di dashboard**.
+3. `curl <api>/v1/health` sampai hijau, lalu **`curl <api>/v1/replay/1/hour/8`** —
+   ini yang pertama memuat model, dan satu-satunya yang membuktikan backend
+   benar-benar berfungsi (lihat jebakan `libgomp`).
 4. A2 — deploy Vercel dengan `OPTIBAYER_API_URL`.
 5. Kalau domain Vercel ternyata beda dari tebakan, perbarui `CORS_ORIGINS` di
    Render lalu **restart** (tidak perlu build ulang).
 6. Buka URL Vercel, pastikan indikator "API tersambung" hijau.
 7. A3 — pasang pinger, jalankan sekali manual untuk memastikan 200.
 8. Jalankan checklist di bawah.
+
+### Status saat ini
+
+| Komponen | Keadaan |
+|---|---|
+| Frontend | ✅ **live** di <https://optibayer.vercel.app> |
+| Backend | ⏳ menunggu verifikasi kartu Render |
+| Pinger | ⏳ belum dipasang |
 
 ---
 
