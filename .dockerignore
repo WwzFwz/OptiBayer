@@ -13,6 +13,15 @@ docs
 tests
 frontend
 models/*.joblib
+# ...tapi surrogate-nya HARUS ikut. Dockerfile memang melatih ulang saat build
+# (baris 30) sehingga di jalur itu berkas ini mubazir — dan `COPY` di baris 25
+# cuma mengambil metrics.json, jadi menambahkannya di sini tidak mengubah image
+# sama sekali, hanya +1,6 MB konteks build.
+# Yang berubah: FastAPI Cloud mengemas aplikasi dengan menghormati berkas ini
+# TANPA menjalankan langkah training. Selama baris di atas tidak dikecualikan,
+# artefaknya terbuang diam-diam dan /v1/model/health membalas {"targets":{}} —
+# semua endpoint prediksi 500 padahal berkasnya jelas-jelas ada di git.
+!models/surrogate_*.joblib
 data/processed
 *.zip
 *.xlsm
