@@ -29,7 +29,7 @@ export default function Rail({
   const { setPanelOpen } = useStore();
   return (
     <nav
-      className="flex flex-col items-center gap-1 py-3 shrink-0"
+      className="relative z-50 flex flex-col items-center gap-1 py-3 shrink-0"
       style={{ width: 60, background: C.surface, borderRight: `1px solid ${C.grid}` }}
     >
       {/* Ikonnya dulu `PanelLeft`, yang di seluruh web berarti "lipat/buka
