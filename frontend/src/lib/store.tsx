@@ -47,6 +47,16 @@ type Store = {
   hourData: HourData | null;
   loadingHour: boolean;
   apiState: ApiState;
+  /**
+   * true begitu ada SATU permintaan yang benar-benar gagal.
+   *
+   * Dipakai untuk menahan spanduk "menyiapkan server" sampai kegagalan itu
+   * nyata. Tanpa penahan ini spanduk kuning berkedip di setiap pemuatan
+   * halaman — termasuk saat backend sehat — karena keadaan awal memang belum
+   * tahu apa-apa sebelum jawaban pertama tiba. Kedipan itu sendiri terbaca
+   * sebagai glitch, persis kesan yang mau dihindari.
+   */
+  pernahGagal: boolean;
   /** true setelah replay pernah dijalankan — dipakai utk menyorot ajakan Play */
   pernahMain: boolean;
   dock: Dock;                    // posisi panel advisory (drag utk memindah)
@@ -274,7 +284,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     <Ctx.Provider value={{
       page, setPage,
       scenario, setScenario, hour, setHour, playing, setPlaying,
-      pernahMain,
+      pernahMain, pernahGagal: kegagalan > 0,
       speedMs, setSpeedMs, seq, hourData, loadingHour, apiState,
       dock, setDock, panelOpen, setPanelOpen, decisions, decide, gagalCatat,
     }}>

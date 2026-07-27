@@ -53,9 +53,15 @@ export default function Shell() {
   const shift = Math.floor(clock / 8) + 1;
   const scenarioName = s.scenario === 1 ? "Gangguan: Silika Spike" : "Operasi Normal";
 
+  // "menyiapkan" punya dua wajah. Sebelum ada kegagalan nyata kita cuma BELUM
+  // tahu — nadanya netral, bukan kuning peringatan, supaya pemuatan yang sehat
+  // tidak berkedip seolah bermasalah. Kuning baru dipakai setelah permintaan
+  // benar-benar gagal, saat cold start jadi dugaan yang masuk akal.
   const { warna, label } = {
     hidup: { warna: C.status.good, label: "API tersambung" },
-    menyiapkan: { warna: C.status.warning, label: "Menyiapkan server…" },
+    menyiapkan: s.pernahGagal
+      ? { warna: C.status.warning, label: "Menyiapkan server…" }
+      : { warna: C.muted, label: "Menyambungkan…" },
     mati: { warna: C.status.critical, label: "API terputus" },
   }[s.apiState];
 
@@ -116,7 +122,7 @@ export default function Shell() {
           </span>
         </header>
 
-        {s.apiState === "menyiapkan" && (
+        {s.apiState === "menyiapkan" && s.pernahGagal && (
           <div className="flex items-center gap-2 px-4 py-2 text-sm"
                style={{ background: "#fab21922", color: C.status.warning }}>
             <Loader2 size={16} className="spin-ikon" />
