@@ -9,30 +9,43 @@ Tujuan: **juri cukup membuka satu link**, tanpa memasang apa pun.
 
 ## Pilih jalur dulu — ini menentukan segalanya
 
-Dua situasi di bawah kelihatan mirip tapi menuntut arsitektur berbeda:
-
 | Situasi | Jalur | Kenapa |
 |---|---|---|
-| **Link dikirim di proposal.** Juri membuka sendiri, kapan saja, tanpa kamu di sana | **A — Vercel + HF Spaces + pinger** | Tidak ada yang bisa "memanaskan" link sebelum dibuka. Cold start akan dibaca sebagai aplikasi rusak |
-| **Demo langsung.** Kamu buka linknya sendiri di depan juri | **D — Render blueprint** | Cukup buka link 1 menit sebelum mulai. Setup paling singkat |
+| **Link dikirim di proposal.** Juri membuka sendiri, kapan saja, tanpa kamu di sana | **A — Vercel + Render + cron** | Tidak ada yang bisa "memanaskan" link sebelum dibuka. Cold start akan dibaca sebagai aplikasi rusak |
 | **Tanpa akun / offline** | **E — Docker Compose lokal** | Satu perintah |
 
 Sisa dokumen ini berfokus ke **jalur A**, karena itu kasus yang paling tidak
 memaafkan kesalahan.
 
-### Kenapa jalur A ada
+### Kenapa jalur A dipecah ke dua penyedia
 
-Di Render free tier, kedua service tidur setelah ~15 menit menganggur. Untuk
-link yang dibuka juri tanpa persiapan, kegagalannya berlapis dua:
+Godaan pertama adalah menaruh frontend dan backend sama-sama di Render, karena
+`render.yaml` bisa menyalakan keduanya sekaligus. Jangan. Di free tier keduanya
+tidur setelah ~15 menit menganggur, dan kegagalannya berlapis dua:
 
-1. Juri klik link → frontend tidur, bangun 30–60 dtk. Layar kosong.
+1. Juri klik link → frontend tidur, bangun 30–60 dtk. **Layar kosong.**
 2. Frontend akhirnya render → memanggil backend, yang **juga masih tidur**.
 3. Halaman tampil lengkap tetapi seluruh angkanya kosong dengan status
    **"API terputus"**.
 
 Langkah 3 yang mematikan. Juri tidak melihat "sedang bangun" — dia melihat
-aplikasi yang terbuka tapi rusak, lalu menutup tab. Jalur A menghapus kedua
-lapisan itu: Vercel tidak pernah tidur, dan pinger menjaga backend tetap hidup.
+aplikasi yang terbuka tapi rusak, lalu menutup tab.
+
+Menjaga keduanya tetap hidup dengan ping juga bukan jalan keluar, karena
+**jatah 750 jam instance Render dihitung per AKUN, bukan per service.** Satu
+bulan ≈ 730 jam. Dua service yang sama-sama dijaga hidup = ~1460 jam: kuota
+habis sekitar tanggal 15, lalu Render menangguhkan keduanya sampai bulan
+berikutnya. Untuk demo yang kamu tonton sendiri itu tidak apa-apa; untuk
+proposal yang dibuka entah kapan, itu persis skenario terburuknya.
+
+Dan ada alasan yang lebih dalam dari sekadar kuota. Seluruh penanganan cold
+start yang sudah dibangun di UI — state `menyiapkan`, spanduk "Menyiapkan
+server", percobaan ulang otomatis (`frontend/src/lib/store.tsx`) — **hanya
+berfungsi kalau frontend hidup untuk menggambarnya.** Frontend yang tidur tidak
+punya apa pun untuk menampilkan pesan apa pun.
+
+Karena itu: frontend ke Vercel (tidak pernah tidur, tanpa kuota jam), dan 730
+jam Render disisakan utuh untuk satu-satunya hal yang memang butuh Docker.
 
 ---
 
@@ -41,106 +54,72 @@ lapisan itu: Vercel tidak pernah tidur, dan pinger menjaga backend tetap hidup.
 | Komponen | Di mana | Alasan pemilihan |
 |---|---|---|
 | Next.js (`frontend/`) | **Vercel** free | Tidak pernah tidur. Klik → langsung terbuka |
-| FastAPI (`src/`) | **HF Spaces** (Docker) | 16 GB RAM (isu OOM 512 MB lenyap), tanpa kuota jam bulanan |
+| FastAPI (`src/`) | **Render** free, Docker | Satu-satunya free tier tersisa yang menjalankan Docker tanpa kartu |
 | Keep-alive | **cron-job.org** | Ping `/v1/health` tiap 10 mnt supaya backend tak sempat tidur |
 
-> Syarat free tier ketiga layanan ini berubah cukup sering. Angka kuota di
-> dokumen ini layak dikonfirmasi sekali di halaman pricing resmi sebelum kamu
+> Syarat free tier berubah cukup sering dan **tanpa pengumuman** — lihat catatan
+> HF Spaces di bawah. Konfirmasi sekali di halaman pricing resmi sebelum kamu
 > menggantungkan penjurian padanya.
+
+### RAM: 281 MB dari 512 MB (sudah diukur, bukan asumsi)
+
+Kekhawatiran wajar soal Render free adalah 512 MB RAM untuk proses yang menarik
+lightgbm + shap + pymoo + scikit-learn sekaligus. Sudah diukur langsung dengan
+menembak seluruh jalur berat:
+
+| Titik | RSS |
+|---|---|
+| baseline interpreter | 18 MB |
+| setelah `import src.integration.api` | 117 MB |
+| setelah `/v1/replay/1/hour/8` (muat model + shap) | 275 MB |
+| setelah pareto + operating-map + active-learning | **281 MB** |
+
+Sisa ~230 MB. Aman, dengan catatan: lonjakan besarnya terjadi sekali saja saat
+model pertama dimuat, bukan tiap permintaan. Kalau backend restart sendiri
+tepat saat optimizer dipakai, itu OOM — bukan bug kode.
 
 ### Kedua URL sudah bisa ditebak sebelum deploy
 
-Ini menyelesaikan masalah ayam-telur yang bikin repot di jalur Render: frontend
-butuh URL backend, backend butuh URL frontend untuk CORS. Padahal keduanya
-ditentukan oleh nama yang **kamu pilih sendiri**:
+Ini menyelesaikan masalah ayam-telur: frontend butuh URL backend, backend butuh
+URL frontend untuk CORS. Padahal keduanya ditentukan nama yang **kamu pilih
+sendiri**:
 
 | Layanan | Pola URL | Contoh |
 |---|---|---|
 | Vercel | `https://<nama-project>.vercel.app` | `https://optibayer.vercel.app` |
-| HF Spaces | `https://<user>-<nama-space>.hf.space` | `https://wwzfwz-optibayer-api.hf.space` |
+| Render | `https://<nama-service>.onrender.com` | `https://optibayer-api.onrender.com` |
 
-Jadi tentukan kedua nama itu **di awal**, lalu isi semua env var sekaligus —
-tidak perlu bolak-balik menunggu satu service hidup dulu.
+Tentukan kedua nama itu **di awal**, lalu isi semua env var sekaligus.
 
-> ⚠️ Untuk HF, pakai domain **`.hf.space`**, bukan `huggingface.co/spaces/...`.
-> Yang kedua adalah halaman pembungkus ber-iframe, bukan endpoint API. Salah
-> pilih di sini menghasilkan gejala "API terputus" yang membingungkan.
+> ⚠️ Nama service harus unik se-Render. Kalau `optibayer-api` sudah dipakai
+> orang lain, Render menambah sufiks acak — dan nilai yang dipatok di
+> `render.yaml` jadi salah alamat. **Selalu cek URL asli di dashboard** sebelum
+> menganggap selesai.
 
 ---
 
-## A1. Backend ke Hugging Face Spaces
+## A1. Backend ke Render
 
-HF Space adalah **repo git tersendiri** di huggingface.co. Kodenya kamu push ke
-sana; HF membangun `Dockerfile` di root repo.
+`render.yaml` sudah berisi definisinya (backend saja — lihat komentar di
+berkasnya soal kenapa frontend tidak ada di situ).
 
-### Konfigurasi Space ada di frontmatter README
-
-HF membaca pengaturan Space dari blok YAML di baris pertama `README.md`. Karena
-kita mem-push repo ini apa adanya, `README.md` repo ini yang akan dibaca — dan
-tanpa frontmatter, Space tidak akan tahu dirinya Docker Space.
-
-Menempelkan frontmatter itu ke `README.md` di `main` akan membuat GitHub
-merender tabel YAML di puncak README — jelek untuk repo yang ikut dinilai.
-Karena itu pakai **branch terpisah**:
-
-```bash
-git checkout -b hf-space
-```
-
-Tambahkan blok ini di **baris paling atas** `README.md` (sebelum judul `#`):
-
-```yaml
----
-title: OptiBayer API
-emoji: 🏭
-colorFrom: blue
-colorTo: gray
-sdk: docker
-app_port: 8000
-pinned: false
----
-```
-
-`app_port: 8000` penting: default HF adalah 7860, sedangkan `Dockerfile` kita
-mendengarkan di 8000. Mendeklarasikannya di sini berarti **Dockerfile tidak
-perlu diubah sama sekali** — image yang sama tetap dipakai docker-compose lokal.
+1. Pastikan repo sudah ter-push ke GitHub (`WwzFwz/OptiBayer`).
+2. Render Dashboard → **New → Blueprint** → pilih repo ini.
+3. Render membaca `render.yaml`, membangun `Dockerfile` di root, dan menyalakan
+   `optibayer-api` di region `singapore`.
+4. Build melatih surrogate (`Dockerfile:30`, ~14 dtk) — jadi model ikut di
+   dalam image, tidak dilatih saat start.
+5. Sebelum lanjut, pastikan `CORS_ORIGINS` di dashboard **persis** sama dengan
+   domain Vercel yang akan kamu pakai.
 
 ```bash
-git commit -am "chore(hf): frontmatter Space"
-```
-
-### Push dan set secret
-
-1. Buat Space di <https://huggingface.co/new-space> → SDK **Docker** → template
-   **Blank** → visibility **Public**.
-2. Sambungkan dan push branch tadi sebagai `main`-nya Space:
-
-```bash
-git remote add hf https://huggingface.co/spaces/<user>/<nama-space>
-git push hf hf-space:main --force
-```
-
-3. Di Space → **Settings → Variables and secrets**, tambahkan:
-
-| Nama | Jenis | Isi |
-|---|---|---|
-| `CORS_ORIGINS` | Variable | `https://<nama-project>.vercel.app` |
-| `OPTIBAYER_WRITE_TOKEN` | **Secret** | string acak, mis. `openssl rand -hex 24` |
-
-4. Tunggu build (melatih surrogate saat build, lihat `Dockerfile:30`), lalu uji:
-
-```bash
-curl https://<user>-<nama-space>.hf.space/v1/health
+curl https://optibayer-api.onrender.com/v1/health
 # {"ok":true,"service":"optibayer","version":"v1-draft"}
 ```
 
-### Memperbarui backend nanti
-
-Branch `hf-space` cuma berbeda satu blok frontmatter dari `main`:
-
-```bash
-git checkout hf-space && git merge main && git push hf hf-space:main
-```
+`OPTIBAYER_WRITE_TOKEN` di-generate otomatis oleh Render (`generateValue: true`)
+— tidak perlu kamu isi, tapi salin nilainya dari dashboard kalau mau memakai
+`/v1/knowledge/add` dari luar browser.
 
 ---
 
@@ -148,7 +127,7 @@ git checkout hf-space && git merge main && git push hf hf-space:main
 
 Next.js-nya ada di subdirektori, jadi satu pengaturan wajib diubah:
 
-1. <https://vercel.com/new> → import repo `antham-hackathon-nyukses`.
+1. <https://vercel.com/new> → import repo `OptiBayer`.
 2. **Root Directory → `frontend`.** Kalau dilewat, Vercel tidak menemukan
    `package.json` dan build gagal.
 3. Framework preset terdeteksi otomatis sebagai Next.js. Biarkan.
@@ -156,10 +135,10 @@ Next.js-nya ada di subdirektori, jadi satu pengaturan wajib diubah:
 
 | Nama | Isi |
 |---|---|
-| `OPTIBAYER_API_URL` | `https://<user>-<nama-space>.hf.space` |
+| `OPTIBAYER_API_URL` | `https://optibayer-api.onrender.com` |
 
 5. Deploy. Nama project menentukan domainnya — pastikan cocok dengan yang sudah
-   kamu isikan ke `CORS_ORIGINS` di HF.
+   diisikan ke `CORS_ORIGINS` di Render.
 
 Alamat API dibaca **saat runtime** lewat `frontend/src/app/layout.tsx:30`, bukan
 ditanam ke bundle. Artinya kalau backend pindah, cukup ubah env var lalu
@@ -174,13 +153,16 @@ cadangan di `lib/api.ts`.)
 
 ---
 
-## A3. Pinger — di mana persisnya
+## A3. Pinger — di mana persisnya, dan kenapa wajib
 
 **Pinger bukan bagian dari aplikasimu.** Dia layanan cron eksternal yang
-memanggil URL backend dari luar, dengan jadwal tetap, supaya penyedia hosting
-tidak pernah menganggap backend menganggur. Tidak ada kode yang perlu ditulis;
-yang dipanggil adalah endpoint `/v1/health` yang sudah ada
-(`src/integration/api.py:73`) — murah, tanpa efek samping, tanpa auth.
+memanggil URL backend dari luar, dengan jadwal tetap, supaya Render tidak pernah
+menganggap backend menganggur. Tidak ada kode yang perlu ditulis; yang dipanggil
+adalah `/v1/health` yang sudah ada (`src/integration/api.py:73`) — murah, tanpa
+efek samping, tanpa auth.
+
+Di Render ini **wajib, bukan optimasi**: tanpa pinger, instance tidur setelah 15
+menit dan permintaan pertama juri menunggu 30–60 detik.
 
 ### Pilihan yang disarankan: cron-job.org (gratis)
 
@@ -190,7 +172,7 @@ yang dipanggil adalah endpoint `/v1/health` yang sudah ada
 | Field | Isi |
 |---|---|
 | Title | `optibayer keepalive` |
-| URL | `https://<user>-<nama-space>.hf.space/v1/health` |
+| URL | `https://optibayer-api.onrender.com/v1/health` |
 | Schedule | Every **10 minutes** |
 | Request method | `GET` |
 
@@ -198,8 +180,12 @@ yang dipanggil adalah endpoint `/v1/health` yang sudah ada
    merangkap **monitoring**. Kalau backend mati diam-diam tiga minggu setelah
    proposal dikirim, kamu tahu — bukan juri yang menemukannya.
 
-UptimeRobot (interval minimum 5 menit di paket gratis) bekerja sama baiknya
-kalau kamu sudah punya akun di sana.
+UptimeRobot (interval minimum 5 menit di paket gratis) bekerja sama baiknya.
+
+> Interval 10 menit tidak menambah pemakaian kuota. Jam instance terpakai selama
+> service **bangun**, bukan per permintaan — ping yang lebih sering tidak
+> membuatnya lebih boros, dan ping yang lebih jarang dari 15 menit membuat
+> seluruh usaha ini sia-sia.
 
 ### Alternatif: GitHub Actions (sudah disiapkan di repo)
 
@@ -212,23 +198,39 @@ proposal:
   repo.** Proposal yang mengendap dua bulan akan kehilangan pinger-nya persis
   saat masih dibutuhkan.
 - **Hanya gratis kalau repo publik.** Di repo privat, setiap run dibulatkan ke
-  atas ke 1 menit; ping tiap 10 menit ≈ 4.300 run/bulan ≈ 4.300 menit,
-  jauh melewati jatah 2.000 menit/bulan.
+  atas ke 1 menit; ping tiap 10 menit ≈ 4.300 menit/bulan, jauh melewati jatah
+  2.000 menit.
 
 Karena itu cron-job.org yang direkomendasikan, dan workflow ini disediakan
-sebagai cadangan bila kamu memang lebih suka semuanya di dalam repo.
+sebagai cadangan.
+
+---
+
+## Kenapa bukan Hugging Face Spaces (dan yang lain)
+
+Dicatat supaya tidak dievaluasi ulang dari nol nanti. Status per **Juli 2026**:
+
+| Kandidat | Status | Sebab |
+|---|---|---|
+| **HF Spaces** | ❌ gugur | Docker **dan** Gradio SDK kini menuntut langganan PRO / kredit di cpu-basic. Hanya Static Space (HTML/JS, tanpa Python) yang masih gratis. Diubah tanpa pengumuman — halaman dokumentasi Docker Spaces sampai sekarang tidak menyebutnya |
+| **Vercel Python Function** | ❌ gugur | Batas bundle serverless 250 MB. scipy + scikit-learn + lightgbm + shap + pymoo + pandas sudah 400–600 MB. Tidak akan pernah muat |
+| **Fly.io / Railway / Cloud Run / Koyeb** | ❌ gugur | Semua menuntut kartu di depan |
+| **Bekukan data, buang backend** | ❌ gugur | Halaman monitoring memang bisa distatiskan, tapi `/v1/sensitivity`, `/v1/operating-map`, `/v1/pareto`, `/v1/active-learning` menghitung dari input yang juri ketik sendiri. Membekukannya membuat Prediction Lab jadi pajangan — justru bagian yang paling membuktikan klaim proposal |
+| **Render free** | ✅ dipakai | Docker tanpa kartu, 512 MB cukup (terukur 281 MB), region Singapore |
 
 ---
 
 ## Urutan pengerjaan (± 30 menit)
 
-1. Tentukan dua nama: project Vercel dan Space HF. Tulis kedua URL-nya.
-2. A1 — push backend ke HF, isi `CORS_ORIGINS` + `OPTIBAYER_WRITE_TOKEN`.
-3. `curl .../v1/health` sampai hijau.
+1. Tentukan dua nama: project Vercel dan service Render. Tulis kedua URL-nya.
+2. A1 — Blueprint di Render, tunggu build, **cek URL asli di dashboard**.
+3. `curl <api>/v1/health` sampai hijau.
 4. A2 — deploy Vercel dengan `OPTIBAYER_API_URL`.
-5. Buka URL Vercel, pastikan indikator "API tersambung" hijau.
-6. A3 — pasang pinger, jalankan sekali secara manual untuk memastikan 200.
-7. Jalankan checklist di bawah.
+5. Kalau domain Vercel ternyata beda dari tebakan, perbarui `CORS_ORIGINS` di
+   Render lalu **restart** (tidak perlu build ulang).
+6. Buka URL Vercel, pastikan indikator "API tersambung" hijau.
+7. A3 — pasang pinger, jalankan sekali manual untuk memastikan 200.
+8. Jalankan checklist di bawah.
 
 ---
 
@@ -238,7 +240,7 @@ sebagai cadangan bila kamu memang lebih suka semuanya di dalam repo.
 |---|---|---|---|
 | `OPTIBAYER_API_URL` | web | URL publik backend | ✅ |
 | `CORS_ORIGINS` | api | URL publik frontend (boleh dipisah koma) | ✅ |
-| `OPTIBAYER_WRITE_TOKEN` | api | rahasia acak | ✅ kalau publik |
+| `OPTIBAYER_WRITE_TOKEN` | api | rahasia acak (Render meng-generate sendiri) | ✅ kalau publik |
 | `LLM_PROVIDER` + kuncinya | api | lihat `.env.example`; default `template` (offline) | — |
 | `MQTT_HOST` | api | kalau event OT mau diterbitkan ke broker sungguhan | — |
 
@@ -263,13 +265,16 @@ identitas penekan tombol seharusnya ikut tercatat di kolom `sumber`.
 
 ## Batasan yang harus kamu tahu sebelum kirim proposal
 
-**Penyimpanan bersifat sementara.** HF Spaces (dan Render free) tidak memberi
-disk persisten. Keputusan Terima/Tolak di Audit Trail dan entri Knowledge Pack
-yang ditambahkan lewat UI **hilang setiap kali container di-restart atau
-di-rebuild**. Dalam satu sesi penjurian semuanya bekerja normal — refresh tetap
-menampilkan keputusan tadi — tetapi jangan menjanjikan persistensi jangka
-panjang di proposal. Kalau itu perlu, langkah berikutnya adalah database
-eksternal (mis. Postgres gratis di Neon/Supabase), bukan menambah disk.
+**Penyimpanan bersifat sementara.** Render free tidak memberi disk persisten.
+Keputusan Terima/Tolak di Audit Trail dan entri Knowledge Pack yang ditambahkan
+lewat UI **hilang setiap kali container di-restart atau di-rebuild**. Dalam satu
+sesi penjurian semuanya bekerja normal — refresh tetap menampilkan keputusan
+tadi — tetapi jangan menjanjikan persistensi jangka panjang di proposal. Kalau
+itu perlu, langkah berikutnya adalah database eksternal (mis. Postgres gratis di
+Neon/Supabase), bukan menambah disk.
+
+**Jangan membuat service free lain di akun Render yang sama.** Margin kuotanya
+cuma ~20 jam sebulan; apa pun yang ikut bangun memakannya.
 
 **Pinger mengurangi cold start, bukan menghapusnya.** Kalau pinger mati atau
 platform memaksa rebuild, permintaan pertama tetap lambat. Karena itu:
@@ -278,35 +283,11 @@ platform memaksa rebuild, permintaan pertama tetap lambat. Karena itu:
   platform gratis bisa mendadak suspend, dan proposal mungkin dibuka tiga
   minggu lagi. Kalau link bermasalah, juri tetap sudah melihat produknya. Ini
   asuransi paling murah yang ada.
-- Pastikan UI menampilkan state "menyiapkan server" — **bukan** "API terputus" —
-  selama backend belum menjawab. Aplikasi yang bilang "tunggu sebentar" dibaca
-  sebagai sedang bekerja; yang bilang "terputus" dibaca sebagai rusak. Kondisi
-  teknisnya identik, kesimpulan jurinya berbeda.
-
----
-
-## D. Render (cadangan — blueprint ada di repo)
-
-Setup paling singkat, cocok untuk demo yang kamu pandu sendiri. `render.yaml`
-mendefinisikan kedua service sekaligus.
-
-1. Push repo ke GitHub.
-2. Render Dashboard → **New → Blueprint** → pilih repo ini.
-3. Tunggu `optibayer-api` hidup, salin URL-nya.
-4. Di `optibayer-web`, set `OPTIBAYER_API_URL` = URL backend → **Restart**
-   (tidak perlu build ulang).
-5. Di `optibayer-api`, set `CORS_ORIGINS` = URL frontend.
-
-Nama service harus unik se-Render. Kalau `optibayer-web` sudah dipakai orang
-lain, Render menambah sufiks acak — dan nilai yang sudah dipatok di
-`render.yaml:29` serta `render.yaml:48` jadi salah alamat. Selalu cek URL asli
-di dashboard sebelum menganggap selesai.
-
-Dua batasan free tier yang perlu diterima: tidur setelah ~15 menit (buka link
-sekali sebelum sesi), dan **RAM 512 MB** untuk backend yang menarik lightgbm +
-shap + pymoo dalam satu proses — belum pernah diukur, jadi pantau tab Metrics
-setelah deploy pertama. Kalau backend restart sendiri saat optimizer dipakai,
-itu OOM, bukan bug kode.
+- UI sudah menampilkan state "menyiapkan server" — **bukan** "API terputus" —
+  selama backend belum pernah menjawab (`frontend/src/lib/store.tsx`). Aplikasi
+  yang bilang "tunggu sebentar" dibaca sebagai sedang bekerja; yang bilang
+  "terputus" dibaca sebagai rusak. Kondisi teknisnya identik, kesimpulan
+  jurinya berbeda.
 
 ---
 
@@ -351,11 +332,11 @@ Periksa berurutan:
 
 ```bash
 # 1. Backend hidup?
-curl https://<backend>/v1/health
+curl https://optibayer-api.onrender.com/v1/health
 
 # 2. CORS mengizinkan domain frontend? Baris access-control-* harus muncul.
-curl -H "Origin: https://<frontend>" -D - -o /dev/null \
-     https://<backend>/v1/health | grep -i access-control
+curl -H "Origin: https://optibayer.vercel.app" -D - -o /dev/null \
+     https://optibayer-api.onrender.com/v1/health | grep -i access-control
 
 # 3. Alamat yang benar-benar dipakai halaman (jalankan di console browser):
 #    window.__OPTIBAYER_API__
@@ -365,8 +346,10 @@ curl -H "Origin: https://<frontend>" -D - -o /dev/null \
   sama termasuk `https://` dan tanpa garis miring di akhir.
 - `undefined` di langkah 3 → `OPTIBAYER_API_URL` belum ter-set di frontend, atau
   deploy-nya belum dijalankan ulang setelah env diubah.
-- Di HF, URL backend memakai `huggingface.co/spaces/...` alih-alih `.hf.space` →
-  ganti; yang pertama bukan endpoint API.
+- Permintaan pertama lambat lalu normal → instance sempat tidur. Cek riwayat
+  eksekusi pinger; kemungkinan ada jeda >15 menit.
+- Backend restart sendiri saat Prediction Lab dipakai → OOM. Cek tab Metrics di
+  Render; lihat angka RAM terukur di atas sebagai pembanding.
 
 ---
 
@@ -375,7 +358,7 @@ curl -H "Origin: https://<frontend>" -D - -o /dev/null \
 - [ ] Buka link frontend dari **jaringan lain** (mis. data seluler, mode samaran)
       — memastikan tidak ada yang lolos hanya karena cache browsermu
 - [ ] Indikator API hijau
-- [ ] Ganti skenario ke **"Gangguan: Silika Spike"**, tekan ▶ Play
+- [ ] Ganti skenario ke **"Gangguan: Silika Spike"**, tekan ▶ Mulai Simulasi
 - [ ] Salin link satu halaman dalam (mis. `?p=redmud&s=1&h=14`), buka di tab
       baru — harus mendarat persis di sana (deep link)
 - [ ] Cek satu kartu advisory memuat interval (mis. "±0.22") dan dasar delta
@@ -385,4 +368,5 @@ curl -H "Origin: https://<frontend>" -D - -o /dev/null \
       cek `CORS_ORIGINS`)
 - [ ] `curl <api>/v1/health` mengembalikan `{"ok":true}`
 - [ ] Riwayat eksekusi pinger menunjukkan 200 berturut-turut
+- [ ] Dashboard Render: sisa jam instance bulan ini masih wajar
 - [ ] GIF demo + screenshot sudah terlampir di proposal sebagai cadangan

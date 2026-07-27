@@ -1,20 +1,25 @@
-# Blueprint deploy OptiBayer di Render (free tier) — juri cukup dapat LINK.
+# Blueprint deploy OptiBayer di Render — BACKEND SAJA.
+#
+# Frontend TIDAK ada di sini, dan itu disengaja. Jatah free tier Render adalah
+# 750 jam instance per BULAN, dihitung untuk seluruh akun, bukan per service.
+# Satu bulan ≈ 730 jam, jadi kuota itu hanya cukup menjaga SATU service hidup
+# 24/7. Menaruh frontend di sini juga berarti ~1460 jam dan kuota habis sekitar
+# tanggal 15 — link proposal mati justru di paruh bulan saat tidak ada yang
+# menonton. Frontend hidup di Vercel (tanpa kuota jam, tanpa tidur); lihat
+# docs/22-deploy.md.
+#
+# Konsekuensi lain: jangan membuat service free lain di akun ini. Apa pun yang
+# ikut bangun menggerus 20 jam sisa margin.
 #
 # Pakai:
-#   1. Push repo ini ke GitHub.
-#   2. Render Dashboard -> New -> Blueprint -> pilih repo ini.
-#   3. Render membaca berkas ini dan menyalakan kedua service sekaligus.
-#   4. Setelah backend hidup, salin URL-nya ke env OPTIBAYER_API_URL milik
-#      service web. Nilai itu dibaca SAAT RUNTIME (disuntik server ke halaman,
-#      lihat frontend/src/app/layout.tsx), jadi cukup restart — tidak perlu
-#      build ulang image.
-#
-# Catatan free tier: instance tidur setelah ~15 menit menganggur dan butuh
-# ~30-60 detik untuk bangun. Sebelum sesi penjurian, buka link-nya sekali
-# supaya sudah panas.
+#   1. Render Dashboard -> New -> Blueprint -> pilih repo ini.
+#   2. Setelah hidup, salin URL-nya (https://optibayer-api.onrender.com) ke env
+#      OPTIBAYER_API_URL di project Vercel.
+#   3. Pastikan CORS_ORIGINS di bawah cocok dengan domain Vercel yang asli.
+#   4. Pasang cron ping /v1/health tiap 10 menit -- WAJIB, bukan opsional:
+#      tanpa itu instance tidur setelah ~15 menit menganggur.
 
 services:
-  # ---------------------------------------------------------------- backend
   - type: web
     name: optibayer-api
     runtime: docker
@@ -24,25 +29,14 @@ services:
     region: singapore          # paling dekat ke Indonesia
     healthCheckPath: /v1/health
     envVars:
-      # Isi dgn domain frontend setelah service web punya URL.
+      # Harus PERSIS sama dengan domain Vercel, termasuk https:// dan tanpa
+      # garis miring di akhir. Salah di sini menghasilkan gejala menyesatkan:
+      # halaman terbuka normal tapi seluruh angkanya kosong.
       - key: CORS_ORIGINS
-        value: https://optibayer-web.onrender.com
-      # WAJIB diisi kalau instance ini publik: endpoint tulis (knowledge/add,
-      # audit/decision) akan menuntut header X-Write-Token yang sama.
+        value: https://optibayer.vercel.app
+      # WAJIB karena instance ini publik: /v1/knowledge/add menulis berkas teks
+      # bebas ke disk dan hanya dijaga header X-Write-Token.
       - key: OPTIBAYER_WRITE_TOKEN
         generateValue: true
       - key: LLM_PROVIDER
         value: template        # default offline; ganti + isi kunci kalau mau LLM
-
-  # --------------------------------------------------------------- frontend
-  - type: web
-    name: optibayer-web
-    runtime: docker
-    dockerfilePath: ./frontend/Dockerfile
-    dockerContext: ./frontend
-    plan: free
-    region: singapore
-    envVars:
-      # Dibaca runtime — aman diubah tanpa build ulang.
-      - key: OPTIBAYER_API_URL
-        value: https://optibayer-api.onrender.com

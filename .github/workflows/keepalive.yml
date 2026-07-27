@@ -13,7 +13,7 @@ name: Keepalive
 # Aktifkan dengan mengisi repository variable KEEPALIVE_URL
 # (Settings → Secrets and variables → Actions → Variables):
 #
-#   KEEPALIVE_URL = https://<user>-<space>.hf.space/v1/health
+#   KEEPALIVE_URL = https://optibayer-api.onrender.com/v1/health
 #
 # Selama variable itu kosong, job di bawah dilewati — bukan gagal.
 

@@ -14,8 +14,8 @@ export type Dock = "top" | "right";
 /**
  * Keadaan backend dari sudut pandang UI.
  *
- * "menyiapkan" ada karena hosting gratis (HF Spaces / Render free) menidurkan
- * container saat menganggur; permintaan pertama pengunjung membangunkannya dan
+ * "menyiapkan" ada karena hosting gratis (Render free) menidurkan container
+ * saat menganggur; permintaan pertama pengunjung membangunkannya dan
  * itu memang makan 30-60 detik. Sebelum ini keadaan tersebut tidak dibedakan
  * dari backend yang benar-benar mati, sehingga pengunjung pertama disambut
  * "API terputus" berwarna merah — dibaca sebagai aplikasi rusak, padahal
