@@ -4,6 +4,43 @@ version = "0.1.0"
 description = "OptiBayer — Bayer Process Advisor + CRO Console (ANTAM Hackathon)"
 requires-python = ">=3.11"
 
+# ⚠️ DAFTAR INI KEMBAR DENGAN requirements.txt — ubah keduanya bersamaan.
+#
+# Kenapa kembar dan bukan satu sumber: jalur Docker (Render/Koyeb/compose)
+# memasang lewat `pip install -r requirements.txt`, sedangkan platform berbasis
+# uv seperti FastAPI Cloud hanya membaca blok ini dan mengabaikan
+# requirements.txt sepenuhnya. Tanpa daftar di sini, environment-nya terpasang
+# NOL paket dan gagal dengan "exec: fastapi: not found" — bukan error yang
+# menunjuk ke sebabnya.
+#
+# Bedanya cuma satu baris: `fastapi[standard]`, bukan `fastapi` polos. Extra
+# `standard` yang membawa CLI `fastapi`, dan CLI itulah yang dipanggil platform
+# untuk menyalakan app.
+dependencies = [
+    # inti data & model
+    "pandas==3.0.1",
+    "numpy==2.0.2",
+    "scikit-learn==1.5.2",
+    "lightgbm==4.6.0",
+    "shap==0.52.0",
+    "joblib==1.4.2",
+    # optimizer & fisika
+    "pymoo==0.6.2",
+    "scipy==1.14.1",
+    # antarmuka
+    "fastapi[standard]==0.139.2",
+    "uvicorn==0.32.1",
+    # utilitas
+    "requests==2.32.3",
+    "python-dotenv==1.0.0",
+]
+
+[tool.uv]
+# Repo ini bukan paket yang dipasang, cuma aplikasi yang dijalankan dari root.
+# Tanpa ini uv mencoba mem-build `optibayer` sebagai distribusi dan tersandung
+# tata letak src/ + app/ + tests/ yang tidak dirancang untuk itu.
+package = false
+
 [tool.pytest.ini_options]
 # rootdir eksplisit + testpaths supaya `pytest` (tanpa -m) menemukan src/.
 testpaths = ["tests"]
