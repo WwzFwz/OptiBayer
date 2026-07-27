@@ -6,6 +6,14 @@
 #
 # Perbarui dengan sengaja, lalu jalankan `python -m pytest` sebelum commit.
 # Kebutuhan pengembangan (pytest, ruff, httpx) ada di requirements-dev.txt.
+#
+# ⚠️ DAFTAR INI KEMBAR DENGAN [project].dependencies di pyproject.toml — ubah
+# keduanya bersamaan. Jalur Docker memasang dari sini; platform berbasis uv
+# (FastAPI Cloud) hanya membaca pyproject.toml dan mengabaikan berkas ini.
+#
+# Butuh Python 3.12 TEPAT. Di 3.11 shap tidak terpasang; di >=3.14 pandas
+# menuntut numpy>=2.3.3 sementara scipy menuntut numpy<2.3. Alasan lengkapnya
+# ada di komentar requires-python pyproject.toml.
 
 # --- inti data & model ---
 pandas==3.0.1

@@ -2,7 +2,20 @@
 name = "optibayer"
 version = "0.1.0"
 description = "OptiBayer — Bayer Process Advisor + CRO Console (ANTAM Hackathon)"
-requires-python = ">=3.11"
+# Jendelanya sempit di KEDUA sisi, dan keduanya nyata — bukan kehati-hatian
+# berlebihan. Sebelumnya tertulis ">=3.11" tanpa batas atas, dan itu salah di
+# dua arah sekaligus:
+#
+#   atas  — resolver seperti uv memilih Python terbaru (3.14), dan di sana
+#           pandas menuntut numpy>=2.3.3 sementara scipy 1.14.1 menuntut
+#           numpy<2.3. Mustahil. Di 3.12 syarat pandas turun ke numpy>=1.26
+#           dan seluruh pin di bawah cocok.
+#   bawah — shap 0.52.0 sendiri menuntut Python>=3.12, jadi 3.11 tidak pernah
+#           benar-benar didukung meski tertulis begitu selama ini.
+#
+# Hasilnya persis satu versi: 3.12 — yang memang dipakai Docker kita
+# (python:3.12-slim, Dockerfile:5) dan yang dipakai saat suite uji hijau.
+requires-python = ">=3.12,<3.13"
 
 # ⚠️ DAFTAR INI KEMBAR DENGAN requirements.txt — ubah keduanya bersamaan.
 #
@@ -56,7 +69,7 @@ filterwarnings = [
 
 [tool.ruff]
 line-length = 95
-target-version = "py311"
+target-version = "py312"   # ikut requires-python di atas
 exclude = ["frontend", "notebooks", ".venv", "data"]
 
 
