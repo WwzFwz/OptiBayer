@@ -2,7 +2,8 @@
 // Shell OptiBayer: rail ikon kiri + header + Panel Kendali overlay +
 // panel Advisory yang bisa di-dock (atas / kanan, via drag atau toggle).
 import { useEffect, useRef } from "react";
-import { CircleAlert, Wifi, WifiOff } from "lucide-react";
+import { CircleAlert, Loader2, Pause, Play, Wifi, WifiOff } from "lucide-react";
+import { API } from "@/lib/api";
 import { useToast } from "./ui/Toast";
 import Advisory from "./Advisory";
 import ControlPanel from "./ControlPanel";
@@ -22,6 +23,12 @@ import { useStore } from "@/lib/store";
 import { C } from "@/lib/theme";
 
 const REPLAY_FREE: PageId[] = ["lab", "knowledge", "integrasi"];
+
+// Petunjuk "jalankan uvicorn" hanya masuk akal kalau backend memang di mesin
+// yang sama. Pengunjung sebuah link publik tidak punya terminal kita, dan
+// menyuruhnya menjalankan perintah Python justru menegaskan kesan aplikasinya
+// rusak. Di luar lokal, tawarkan tindakan yang benar-benar bisa dia lakukan.
+const LOKAL = /localhost|127\.0\.0\.1/.test(API);
 
 export default function Shell() {
   const s = useStore();
@@ -46,6 +53,18 @@ export default function Shell() {
   const shift = Math.floor(clock / 8) + 1;
   const scenarioName = s.scenario === 1 ? "Gangguan: Silika Spike" : "Operasi Normal";
 
+  const { warna, label } = {
+    hidup: { warna: C.status.good, label: "API tersambung" },
+    menyiapkan: { warna: C.status.warning, label: "Menyiapkan server…" },
+    mati: { warna: C.status.critical, label: "API terputus" },
+  }[s.apiState];
+
+  // Sorotan hanya sampai replay pernah dijalankan sekali — setelah pengunjung
+  // tahu tombolnya ada, denyut terus-menerus cuma jadi gangguan. Juga tidak
+  // menyorot saat backend belum siap: mengajak menekan tombol yang belum bisa
+  // bekerja hanya memindahkan kekecewaan.
+  const sorotPlay = !s.pernahMain && !s.playing && s.apiState === "hidup";
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: C.page }}>
       <Rail page={page} setPage={setPage} />
@@ -63,21 +82,64 @@ export default function Shell() {
               ? `Hari ${day} · ${String(clock).padStart(2, "0")}:00 · Shift ${shift} · ${scenarioName}`
               : "Halaman bebas replay"}
           </span>
+
+          {/* Ajakan UTAMA. Sebelumnya Play hanya ada di dalam Panel Kendali —
+              overlay yang tertutup secara default di balik satu ikon tanpa
+              label di rail. Akibatnya pengunjung baru mendarat di dashboard
+              yang diam, tanpa satu pun petunjuk bahwa ada replay untuk
+              dijalankan, dan mudah menyimpulkan ini tangkapan layar statis.
+              Panel Kendali tetap memegang kendali lanjutan (kecepatan,
+              skenario, slider jam); yang naik ke sini hanya aksi utamanya. */}
+          {monitoring && (
+            <button
+              onClick={() => s.setPlaying(!s.playing)}
+              aria-pressed={s.playing}
+              aria-label={s.playing ? "Jeda simulasi" : "Mulai simulasi"}
+              className={`btn-lift ml-2 flex items-center gap-1.5 rounded-lg px-3 py-1.5
+                          text-sm font-semibold${sorotPlay ? " pulse-cta" : ""}`}
+              style={{
+                background: s.playing ? C.status.warning : C.status.good,
+                color: "#fff",
+              }}
+            >
+              {s.playing ? <Pause size={15} /> : <Play size={15} />}
+              {s.playing ? "Jeda" : "Mulai Simulasi"}
+            </button>
+          )}
+
           <span className="ml-auto flex items-center gap-1 text-xs"
-                style={{ color: s.apiDown ? C.status.critical : C.status.good }}>
-            {s.apiDown ? <WifiOff size={14} /> : <Wifi size={14} />}
-            {s.apiDown ? "API terputus" : "API tersambung"}
+                style={{ color: warna }}>
+            {s.apiState === "hidup" && <Wifi size={14} />}
+            {s.apiState === "menyiapkan" && <Loader2 size={14} className="spin-ikon" />}
+            {s.apiState === "mati" && <WifiOff size={14} />}
+            {label}
           </span>
         </header>
 
-        {s.apiDown && (
+        {s.apiState === "menyiapkan" && (
+          <div className="flex items-center gap-2 px-4 py-2 text-sm"
+               style={{ background: "#fab21922", color: C.status.warning }}>
+            <Loader2 size={16} className="spin-ikon" />
+            Menyiapkan server — kunjungan pertama biasanya butuh 30–60 detik.
+            Halaman ini akan mengisi sendiri, tidak perlu dimuat ulang.
+          </div>
+        )}
+
+        {s.apiState === "mati" && (
           <div className="flex items-center gap-2 px-4 py-2 text-sm"
                style={{ background: "#d03b3b22", color: C.status.critical }}>
             <CircleAlert size={16} />
-            Backend belum jalan — jalankan:&nbsp;
-            <code style={{ color: C.ink2 }}>
-              python -m uvicorn src.integration.api:app --port 8000
-            </code>
+            {LOKAL ? (
+              <>
+                Backend belum jalan — jalankan:&nbsp;
+                <code style={{ color: C.ink2 }}>
+                  python -m uvicorn src.integration.api:app --port 8000
+                </code>
+              </>
+            ) : (
+              <>Server tidak merespons. Percobaan ulang berjalan otomatis tiap
+                 15 detik — biarkan tab ini terbuka sebentar.</>
+            )}
           </div>
         )}
 

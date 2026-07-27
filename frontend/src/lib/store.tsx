@@ -11,6 +11,27 @@ import { isPageId, PageId } from "./pages";
 
 export type Dock = "top" | "right";
 
+/**
+ * Keadaan backend dari sudut pandang UI.
+ *
+ * "menyiapkan" ada karena hosting gratis (HF Spaces / Render free) menidurkan
+ * container saat menganggur; permintaan pertama pengunjung membangunkannya dan
+ * itu memang makan 30-60 detik. Sebelum ini keadaan tersebut tidak dibedakan
+ * dari backend yang benar-benar mati, sehingga pengunjung pertama disambut
+ * "API terputus" berwarna merah — dibaca sebagai aplikasi rusak, padahal
+ * servernya sedang bangun dan akan hidup sebentar lagi. Kondisi teknisnya
+ * sama, kesimpulan pembacanya berbeda jauh.
+ */
+export type ApiState = "menyiapkan" | "hidup" | "mati";
+
+/** Selama tenggang ini, kegagalan DIANGGAP cold start — bukan backend mati. */
+const TENGGANG_MENYIAPKAN_MS = 90_000;
+/** Jarak antar-percobaan saat masih menyiapkan (cold start berlangsung). */
+const JEDA_MENYIAPKAN_MS = 4_000;
+/** Jarak antar-percobaan saat sudah dinyatakan mati — cukup untuk pulih
+ *  otomatis kalau backend kembali, tanpa membanjiri jaringan. */
+const JEDA_MATI_MS = 15_000;
+
 type Store = {
   page: PageId;                  // halaman aktif (ikut tersimpan di URL)
   setPage: (p: PageId) => void;
@@ -25,7 +46,9 @@ type Store = {
   seq: ReplaySeq | null;
   hourData: HourData | null;
   loadingHour: boolean;
-  apiDown: boolean;
+  apiState: ApiState;
+  /** true setelah replay pernah dijalankan — dipakai utk menyorot ajakan Play */
+  pernahMain: boolean;
   dock: Dock;                    // posisi panel advisory (drag utk memindah)
   setDock: (d: Dock) => void;
   panelOpen: boolean;            // Panel Kendali (overlay kiri)
@@ -48,12 +71,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [page, setPageRaw] = useState<PageId>("overview");
   const [scenario, setScenarioRaw] = useState(1); // default: demo spike
   const [hour, setHour] = useState(8);
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlayingRaw] = useState(false);
+  const [pernahMain, setPernahMain] = useState(false);
   const [speedMs, setSpeedMs] = useState(2000);
   const [seq, setSeq] = useState<ReplaySeq | null>(null);
   const [hourData, setHourData] = useState<HourData | null>(null);
   const [loadingHour, setLoadingHour] = useState(false);
-  const [apiDown, setApiDown] = useState(false);
+  const [apiState, setApiState] = useState<ApiState>("menyiapkan");
+  // Token percobaan ulang: dinaikkan timer, ikut jadi dependensi efek fetch
+  // supaya permintaan diulang tanpa pengunjung harus me-refresh halaman.
+  const [percobaan, setPercobaan] = useState(0);
+  const [kegagalan, setKegagalan] = useState(0);
+  const pernahHidup = useRef(false);
+  const gagalPertama = useRef<number | null>(null);
   // preferensi dock dibaca sekali via lazy initializer (bukan efek) — hindari
   // setState-in-effect & flicker. Guard SSR: localStorage tak ada di server.
   const [dock, setDockRaw] = useState<Dock>(() => {
@@ -74,8 +104,49 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const setScenario = useCallback((s: number) => {
     setScenarioRaw(s);
     setHour(8);
-    setPlaying(false);
+    setPlayingRaw(false);
   }, []);
+
+  // `pernahMain` sengaja hidup di store, bukan di komponen tombol: replay bisa
+  // dinyalakan dari header MAUPUN Panel Kendali, dan sorotan ajakan harus padam
+  // begitu salah satunya dipakai.
+  const setPlaying = useCallback((p: boolean) => {
+    setPlayingRaw(p);
+    if (p) setPernahMain(true);
+  }, []);
+
+  // ------------------------------------------------------- keadaan backend
+  const tandaiHidup = useCallback(() => {
+    pernahHidup.current = true;
+    setApiState("hidup");
+  }, []);
+
+  const tandaiGagal = useCallback(() => {
+    // Kegagalan hanya boleh disebut "mati" kalau backend PERNAH menjawab
+    // (berarti benar-benar putus di tengah jalan), atau kalau tenggang cold
+    // start sudah lewat. Sebelum itu, ini masih wajar.
+    //
+    // Tenggang dihitung sejak kegagalan PERTAMA, bukan sejak halaman dibuka:
+    // `Date.now()` tak boleh dipanggil saat render (aturan kemurnian React),
+    // dan patokan ini justru lebih tepat — yang sedang diberi waktu adalah
+    // proses membangunkan container, dan itu baru diketahui saat permintaan
+    // pertama gagal.
+    const kini = Date.now();
+    if (gagalPertama.current === null) gagalPertama.current = kini;
+    const masihTenggang = kini - gagalPertama.current < TENGGANG_MENYIAPKAN_MS;
+    setApiState(!pernahHidup.current && masihTenggang ? "menyiapkan" : "mati");
+    setKegagalan((n) => n + 1);
+  }, []);
+
+  // Coba lagi otomatis. Tanpa ini pengunjung yang mendarat saat container masih
+  // bangun akan terjebak di layar kosong sampai dia berinisiatif me-refresh —
+  // dan pengunjung yang mengira aplikasinya rusak tidak akan me-refresh.
+  useEffect(() => {
+    if (kegagalan === 0 || apiState === "hidup") return;
+    const jeda = apiState === "menyiapkan" ? JEDA_MENYIAPKAN_MS : JEDA_MATI_MS;
+    const t = setTimeout(() => setPercobaan((n) => n + 1), jeda);
+    return () => clearTimeout(t);
+  }, [kegagalan, apiState]);
 
   // ------------------------------------------------------------------ URL
   // Halaman/skenario/jam disimpan di query string supaya keadaan layar bisa
@@ -145,10 +216,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let alive = true;
     getReplay(scenario)
-      .then((d) => alive && (setSeq(d), setApiDown(false)))
-      .catch(() => alive && setApiDown(true));
+      .then((d) => alive && (setSeq(d), tandaiHidup()))
+      .catch(() => alive && tandaiGagal());
     return () => { alive = false; };
-  }, [scenario]);
+  }, [scenario, percobaan, tandaiHidup, tandaiGagal]);
 
   // data jam aktif: fast saat playing, full saat pause
   useEffect(() => {
@@ -161,18 +232,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       .then((d) => {
         if (reqId.current !== id) return; // respons basi diabaikan
         setHourData(d);
-        setApiDown(false);
+        tandaiHidup();
       })
-      .catch(() => reqId.current === id && setApiDown(true))
+      .catch(() => reqId.current === id && tandaiGagal())
       .finally(() => reqId.current === id && setLoadingHour(false));
-  }, [scenario, hour, playing]);
+  }, [scenario, hour, playing, percobaan, tandaiHidup, tandaiGagal]);
 
   // mesin Play — interval klien (bebas rerun ala Streamlit)
   useEffect(() => {
     if (!playing || !seq) return;
     const t = setInterval(() => {
       setHour((h) => {
-        if (h >= seq.n - 1) { setPlaying(false); return h; }
+        if (h >= seq.n - 1) { setPlayingRaw(false); return h; }
         return h + 1;
       });
     }, speedMs);
@@ -203,7 +274,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     <Ctx.Provider value={{
       page, setPage,
       scenario, setScenario, hour, setHour, playing, setPlaying,
-      speedMs, setSpeedMs, seq, hourData, loadingHour, apiDown,
+      pernahMain,
+      speedMs, setSpeedMs, seq, hourData, loadingHour, apiState,
       dock, setDock, panelOpen, setPanelOpen, decisions, decide, gagalCatat,
     }}>
       {children}

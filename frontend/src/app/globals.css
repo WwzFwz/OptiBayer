@@ -102,6 +102,21 @@ a:focus-visible,
   50% { opacity: 0.45; }
 }
 
+/* ── Ikon berputar (indikator "menyiapkan server") ───────────────── */
+/* Beda dari `.spin` di atas: itu spinner berbasis border untuk elemen kosong,
+   yang ini hanya memutar ikon lucide yang sudah punya bentuk sendiri. */
+.spin-ikon { animation: spin 0.9s linear infinite; }
+
+/* ── Denyut ajakan utama (tombol "Mulai Simulasi" di header) ─────── */
+/* Hanya menyala sebelum replay pernah dijalankan sekali. Cincinnya melebar
+   lalu memudar — menarik mata tanpa menggeser tata letak sedikit pun. */
+.pulse-cta { animation: pulseCta 2.2s ease-in-out infinite; }
+@keyframes pulseCta {
+  0%   { box-shadow: 0 0 0 0 rgba(12, 163, 12, 0.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(12, 163, 12, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(12, 163, 12, 0); }
+}
+
 /* ── Toast masuk ─────────────────────────────────────────────────── */
 .toast-in { animation: toastIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @keyframes toastIn {
@@ -110,6 +125,7 @@ a:focus-visible,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton::after, .spin, .fade-in, .pulse-reco, .toast-in { animation: none; }
+  .skeleton::after, .spin, .spin-ikon, .fade-in, .pulse-reco, .pulse-cta,
+  .toast-in { animation: none; }
   .fade-in { opacity: 1; transform: none; }
 }

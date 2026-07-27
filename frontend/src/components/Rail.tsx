@@ -3,7 +3,7 @@
 // Urutan mengikuti alur pabrik hulu→hilir; tooltip saat hover.
 import {
   Activity, FlaskConical, Snowflake, Recycle, Beaker, BookOpen,
-  Network, Share2, PanelLeft, Flame,
+  Network, Share2, SlidersHorizontal, Flame,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { PageId } from "@/lib/pages";
@@ -32,13 +32,29 @@ export default function Rail({
       className="flex flex-col items-center gap-1 py-3 shrink-0"
       style={{ width: 60, background: C.surface, borderRight: `1px solid ${C.grid}` }}
     >
+      {/* Ikonnya dulu `PanelLeft`, yang di seluruh web berarti "lipat/buka
+          sidebar" — urusan tata letak. Isinya justru kendali simulasi, jadi
+          ikon itu secara aktif salah menjanjikan dan membuat orang TIDAK
+          mengkliknya. `SlidersHorizontal` jujur soal isi, dan tooltipnya kini
+          memakai pola yang sama dengan item navigasi di bawah (bukan atribut
+          `title` bawaan browser yang baru muncul setelah jeda hover ~1 detik
+          dan tidak pernah muncul di layar sentuh). */}
       <button
         onClick={() => setPanelOpen(true)}
-        title="Panel Kendali"
-        className="mb-2 grid place-items-center rounded-lg transition-colors"
-        style={{ width: 40, height: 40, color: C.ink2 }}
+        aria-label="Panel Kendali"
+        className="group relative mb-2 grid place-items-center rounded-lg transition-colors"
+        style={{
+          width: 40, height: 40, color: C.accent,
+          border: `1px solid ${C.grid}`,
+        }}
       >
-        <PanelLeft size={20} />
+        <SlidersHorizontal size={20} />
+        <span
+          className="pointer-events-none absolute left-12 z-50 hidden whitespace-nowrap rounded px-2 py-1 text-xs group-hover:block"
+          style={{ background: "#000", color: C.ink, border: `1px solid ${C.grid}` }}
+        >
+          Panel Kendali — skenario, kecepatan, jam
+        </span>
       </button>
       <div style={{ width: 28, height: 1, background: C.grid }} className="mb-1" />
       {PAGES.map(({ id, label, Icon }) => {

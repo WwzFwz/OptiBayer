@@ -20,6 +20,9 @@ function Probe() {
       <span data-testid="scenario">{s.scenario}</span>
       <span data-testid="hour">{s.hour}</span>
       <span data-testid="gagal">{s.gagalCatat}</span>
+      <span data-testid="api">{s.apiState}</span>
+      <span data-testid="pernah-main">{String(s.pernahMain)}</span>
+      <button onClick={() => s.setPlaying(true)}>main</button>
       <button onClick={() => s.setPage("redmud")}>ke-redmud</button>
       <button onClick={() => s.setHour(14)}>ke-jam-14</button>
       <button onClick={() => s.decide("k1", "terima", "Silika tinggi")}>putuskan</button>
@@ -103,6 +106,65 @@ describe("sinkronisasi URL", () => {
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
     await waitFor(() => expect(screen.getByTestId("page").textContent).toBe("overview"));
+  });
+});
+
+describe("keadaan backend", () => {
+  const HOUR_OK = { hour: 8, fast: false, kpi: {}, cards: [] } as never;
+
+  it("menyebut kegagalan pertama 'menyiapkan', BUKAN 'mati'", async () => {
+    // Hosting gratis menidurkan container; permintaan pertama pengunjung
+    // membangunkannya dan wajar gagal/lambat. Menampilkan "API terputus" merah
+    // di detik pertama membuat aplikasi yang sehat dibaca sebagai rusak.
+    vi.mocked(getReplay).mockRejectedValue(new Error("cold start"));
+    vi.mocked(getHour).mockRejectedValue(new Error("cold start"));
+    pasang();
+    await waitFor(() =>
+      expect(screen.getByTestId("api").textContent).toBe("menyiapkan"));
+  });
+
+  it("menyebutnya 'mati' kalau backend PERNAH hidup lalu putus", async () => {
+    // Beda kelas dari cold start: ini benar-benar putus di tengah jalan, dan
+    // menyamarkannya sebagai "sedang menyiapkan" akan menyesatkan.
+    pasang();
+    await waitFor(() =>
+      expect(screen.getByTestId("api").textContent).toBe("hidup"));
+
+    vi.mocked(getHour).mockRejectedValue(new Error("putus"));
+    act(() => { screen.getByText("ke-jam-14").click(); });
+    await waitFor(() =>
+      expect(screen.getByTestId("api").textContent).toBe("mati"));
+  });
+
+  it("mencoba lagi sendiri dan pulih TANPA refresh", async () => {
+    // Pengunjung yang mengira aplikasinya rusak tidak akan me-refresh, jadi
+    // pemulihan tidak boleh bergantung padanya.
+    vi.useFakeTimers();
+    try {
+      vi.mocked(getReplay).mockRejectedValueOnce(new Error("cold start"));
+      vi.mocked(getHour).mockRejectedValueOnce(new Error("cold start"));
+      pasang();
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+      expect(screen.getByTestId("api").textContent).toBe("menyiapkan");
+
+      // lewati jeda percobaan ulang
+      await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+      expect(screen.getByTestId("api").textContent).toBe("hidup");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("mencatat pernahMain supaya sorotan ajakan Play padam", async () => {
+    vi.mocked(getHour).mockResolvedValue(HOUR_OK);
+    pasang();
+    await waitFor(() =>
+      expect(screen.getByTestId("pernah-main").textContent).toBe("false"));
+
+    act(() => { screen.getByText("main").click(); });
+    await waitFor(() =>
+      expect(screen.getByTestId("pernah-main").textContent).toBe("true"));
   });
 });
 
