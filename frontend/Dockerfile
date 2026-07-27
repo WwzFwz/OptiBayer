@@ -13,6 +13,10 @@ COPY . .
 # harus sudah diketahui di sini — bukan saat container jalan.
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# Menyalakan `output: "standalone"` di next.config.ts. Wajib di sini karena
+# tahap runner di bawah menyalin .next/standalone; tanpa env ini direktori itu
+# tidak dihasilkan dan build berhenti dengan error yang jelas.
+ENV BUILD_STANDALONE=1
 RUN npm run build
 
 FROM node:20-alpine AS runner

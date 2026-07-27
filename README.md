@@ -147,7 +147,7 @@ antam-hackathon/
 > 🔬 Bukti mutu model (benchmark, interval, fidelitas): **[docs/21-benchmark-model.md](docs/21-benchmark-model.md)**
 > · Batasan yang diakui terbuka: **[docs/14-batasan.md](docs/14-batasan.md)**
 > 📖 Setup 5 menit + tur fitur + troubleshooting: **[docs/13-panduan-setup.md](docs/13-panduan-setup.md)**
-> · 🚀 Deploy (juri dapat link): **[docs/22-deploy.md](docs/22-deploy.md)** — blueprint `render.yaml` siap pakai
+> · 🚀 Deploy (juri dapat link): **[docs/22-deploy.md](docs/22-deploy.md)** — Vercel + HF Spaces + pinger untuk link proposal, blueprint `render.yaml` untuk demo terpandu
 > · Laporan teknis (metode + diagram): **[docs/17-laporan-teknis.md](docs/17-laporan-teknis.md)**
 > · 🗺️ **Diagram arsitektur visual (Mermaid): [docs/20-diagram-arsitektur.md](docs/20-diagram-arsitektur.md)**
 

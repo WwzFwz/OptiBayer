@@ -1,0 +1,48 @@
+name: Keepalive
+
+# CADANGAN untuk pinger. Pilihan utama tetap cron-job.org — lihat
+# docs/22-deploy.md bagian A3. Dua jebakan workflow ini, keduanya menyerang
+# justru pada skenario "link dikirim di proposal lalu mengendap berminggu-minggu":
+#
+#   1. GitHub menonaktifkan scheduled workflow setelah ~60 hari tanpa aktivitas
+#      repo. Pinger-nya mati diam-diam persis saat masih dibutuhkan.
+#   2. Gratis HANYA di repo publik. Di repo privat setiap run dibulatkan ke atas
+#      ke 1 menit; ping tiap 10 menit ≈ 4.300 menit/bulan, jauh melewati jatah
+#      2.000 menit.
+#
+# Aktifkan dengan mengisi repository variable KEEPALIVE_URL
+# (Settings → Secrets and variables → Actions → Variables):
+#
+#   KEEPALIVE_URL = https://<user>-<space>.hf.space/v1/health
+#
+# Selama variable itu kosong, job di bawah dilewati — bukan gagal.
+
+on:
+  schedule:
+    # Tiap 10 menit. Cron GitHub bisa meleset beberapa menit saat antrean padat;
+    # itu tidak masalah karena ambang tidur penyedia jauh lebih longgar.
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    name: Ping /v1/health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: vars.KEEPALIVE_URL != ''
+    steps:
+      - name: Bangunkan backend
+        env:
+          URL: ${{ vars.KEEPALIVE_URL }}
+        run: |
+          # --max-time longgar: kalau backend TERLANJUR tidur, permintaan
+          # pertama inilah yang membangunkannya dan itu memang makan puluhan
+          # detik. Gagal di sini berarti backend benar-benar bermasalah, dan
+          # notifikasi Actions jadi merangkap monitoring.
+          curl --fail --silent --show-error --location \
+               --retry 2 --retry-delay 15 --max-time 120 \
+               "$URL"
