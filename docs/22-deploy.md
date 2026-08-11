@@ -152,7 +152,7 @@ $b = [byte[]]::new(24)
 
 ### Setelah hidup
 
-Build melatih surrogate (`Dockerfile:30`, ~14 dtk di laptop, lebih lama di
+Build melatih surrogate (`Dockerfile:35`, ~27 dtk di laptop, lebih lama di
 Render) — model ikut di dalam image, tidak dilatih saat start.
 
 ```bash
@@ -331,9 +331,16 @@ scikit-learn sejak awal.
 
 | Komponen | Keadaan |
 |---|---|
-| Frontend | ✅ **live** di <https://optibayer.vercel.app> |
+| Frontend | ✅ **live** di <https://opti-bayer-23b4.vercel.app> |
 | Backend | ⏳ menunggu verifikasi kartu Render |
 | Pinger | ⏳ belum dipasang |
+
+> URL Vercel yang benar-benar aktif memakai sufiks acak (lihat catatan di A2).
+> Selama alias bersih `optibayer.vercel.app` belum dipasang, **`CORS_ORIGINS`
+> harus berisi `https://opti-bayer-23b4.vercel.app`**, bukan nama tebakan.
+
+Status terkini per 11 Agustus 2026 dan langkah tersisa: lihat
+[doc 23 — Status Deploy](23-status-deploy.md).
 
 ---
 

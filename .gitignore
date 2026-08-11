@@ -24,7 +24,7 @@ models/*.bin
 models/*.ubj
 
 # ...KECUALI surrogate yang harus ikut ke platform non-Docker.
-# Jalur Docker melatihnya saat build (Dockerfile:30), jadi di sana artefak ini
+# Jalur Docker melatihnya saat build (Dockerfile:35), jadi di sana artefak ini
 # tidak dibutuhkan dan akan ditimpa. Tapi FastAPI Cloud membangun environment
 # Python sendiri tanpa langkah training, dan tidak ada lagi jalur
 # "latih-kalau-kosong" sejak app/main.py Streamlit dipensiunkan — tanpa berkas

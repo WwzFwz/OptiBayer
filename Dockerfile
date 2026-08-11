@@ -24,15 +24,23 @@ COPY data/ ./data/
 COPY knowledge/ ./knowledge/
 COPY models/metrics.json ./models/
 
-# Latih surrogate SAAT BUILD, bukan saat container start: artefak .joblib tidak
-# ikut di git (lihat .gitignore), dan kalau dilatih saat start, permintaan
-# pertama juri akan menunggu ~10 detik.
+# Latih surrogate SAAT BUILD, bukan saat container start: kalau dilatih saat
+# start, permintaan pertama juri menunggu ~10 detik. Training terukur 27 detik,
+# jauh di bawah ambang build timeout.
+#
+# Artefak surrogate_*.joblib SEBENARNYA ikut di-track git (.gitignore punya
+# negasi eksplisit `!models/surrogate_*.joblib`). Jadi kalau build di platform
+# free tier kena timeout, ada jalan keluar: ganti baris COPY models/metrics.json
+# di atas jadi `COPY models/ ./models/` lalu hapus baris RUN train ini.
 RUN python -m src.models.train --quiet
 
+# Dokumentasi saja. Port sebenarnya ditentukan env var PORT saat runtime —
+# Render menyuntiknya sendiri (default 10000).
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -fsS http://localhost:8000/v1/health || exit 1
+    CMD curl -fsS http://localhost:${PORT:-8000}/v1/health || exit 1
 
-CMD ["python", "-m", "uvicorn", "src.integration.api:app", \
-     "--host", "0.0.0.0", "--port", "8000"]
+# Bentuk `sh -c` wajib: exec form tidak melakukan ekspansi variabel, sehingga
+# ${PORT} akan diteruskan mentah ke uvicorn dan service dianggap gagal start.
+CMD ["sh", "-c", "python -m uvicorn src.integration.api:app --host 0.0.0.0 --port ${PORT:-8000}"]
